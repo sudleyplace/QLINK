@@ -1,0 +1,129 @@
+NE EXE Format
+Intel byte order
+
+Information from File Format List 2.0 by Max Maischein.
+
+--------!-CONTACT_INFO----------------------
+If you notice any mistakes or omissions, please let me know!  It is only
+with YOUR help that the list can continue to grow.  Please send
+all changes to me rather than distributing a modified version of the list.
+
+This file has been authored in the style of the INTERxxy.* file list
+by Ralf Brown, and uses almost the same format.
+
+Please read the file FILEFMTS.1ST before asking me any questions. You may find
+that they have already been addressed.
+
+         Max Maischein
+
+Max Maischein, 2:244/1106.17
+Max_Maischein@spam.fido.de
+corion@informatik.uni-frankfurt.de
+Corion on #coders@IRC
+--------!-DISCLAIMER------------------------
+DISCLAIMER:  THIS MATERIAL IS PROVIDED "AS IS".  I verify the information
+contained in this list to the best of my ability, but I cannot be held
+responsible for any problems caused by use or misuse of the information,
+especially for those file formats foreign to the PC, like AMIGA or SUN file
+formats. If an information it is marked "guesswork" or undocumented, you
+should check it carefully to make sure your program will not break with
+an unexpected value (and please let me know whether or not it works
+the same way).
+
+Information marked with "???" is known to be incomplete or guesswork.
+
+Some file formats were not released by their creators, others are regarded
+as proprietary, which means that if your programs deal with them, you might
+be looking for trouble. I don't care about this.
+--------------------------------------------
+
+The NE EXE files are the new exe files used by windows and OS/2 executables.
+They contain a small MZ EXE which prints "This program requires Microsoft
+Windows" or something similar but Some files contain both DOS and Windows
+versions of the executable. The position of the new EXE header can be found
+in the old exe header - see the MZ EXE topic for further information. All
+offsets within this header are from the start of the header if not noted
+otherwise.
+
+OFFSET              Count TYPE   Description
+0000h                   2 char   ID='NE'
+0002h                   1 byte   Linker major version
+0003h                   1 byte   Linker minor version
+0004h                   1 word   Offset of entry table (see below)
+0006h                   1 word   Length of entry table in bytes
+0008h                   1 dword  File load CRC (0 in Borland's TPW)
+000Ch                   1 byte   Program flags, bitmapped :
+                                 0-1 - DGroup type :
+                                       0 - none
+                                       1 - single shared
+                                       2 - multiple
+                                       3 - (null)
+                                   2 - Global initialization
+                                   3 - Protected mode only
+                                   4 - 8086 instructions
+                                   5 - 80286 instructions
+                                   6 - 80386 instructions
+                                   7 - 80x87 instructions
+000Dh                   1 byte   Application flags, bitmapped
+                                 0-2 - Application type
+                                       1 - Full screen (not aware of
+                                           Windows/P.M. API)
+                                       2 - Compatible with Windows/P.M. API
+                                       3 - Uses Windows/P.M. API
+                                   3 - OS/2 family application
+                                   4 - reserved?
+                                   5 - Errors in image/executable
+                                   6 - "non-conforming program" whatever
+                                   7 - DLL or driver (SS:SP info invalid, CS:IP
+                                       points at FAR init routine called with
+                                       AX=module handle which returns AX=0000h
+                                       on failure, AX nonzero on successful
+                                       initialization)
+000Eh                   1 byte   Auto data segment index
+0010h                   1 word   Initial local heap size
+0012h                   1 word   Initial stack size
+0014h                   1 dword  Entry point (CS:IP),
+                                 CS is index into segment table
+0018h                   1 dword  Initial stack pointer (SS:SP)
+                                 SS is index into segment table
+001Ch                   1 word   Segment count
+001Eh                   1 word   Module reference count
+0020h                   1 word   Size of nonresident names table in bytes
+0022h                   1 word   Offset of segment table (see below)
+0024h                   1 word   Offset of resource table
+0026h                   1 word   Offset of resident names table
+0028h                   1 word   Offset of module reference table
+002Ah                   1 word   Offset of imported names table
+                                 (array of counted strings, terminated with a
+                                  string of length 00h)
+002Ch                   1 dword  Offset from start of file to nonresident
+                                 names table
+0030h                   1 word   Count of moveable entry point listed in
+                                 entry table
+0032h                   1 word   File alignment size shift count
+                                  0 is equivalent to 9 (default 512-byte pages)
+0034h                   1 word   Number of resource table entries
+0036h                   1 byte   Target operating system
+                                  0 - unknown
+                                  1 - OS/2
+                                  2 - Windows
+                                  3 - European MS-DOS 4.x
+                                  4 - Windows 386
+                                  5 - BOSS (Borland Operating System Services)
+0037h                   1 byte   Other OS/2 EXE flags, bitmapped
+                                 0 - Long filename support
+                                 1 - 2.x protected mode
+                                 2 - 2.x proportional fonts
+                                 3 - Executable has gangload area
+0038h                   1 word   Offset to return thunks or start of gangload
+                                 area - whatever that means.
+003Ah                   1 word   offset to segment reference thunks or length
+                                 of gangload area.
+003Ch                   1 word   Minimum code swap area size
+003Eh                   2 byte   Expected Windows version (minor version first)
+
+EXTENSION:DLL,EXE,FOT
+OCCURENCES:PC
+PROGRAMS:
+REFERENCE:Windows 3.1 SDK Programmer's Reference, Vol 4.
+SEE ALSO:EXE,MZ EXE

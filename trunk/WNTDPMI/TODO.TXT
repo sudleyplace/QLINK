@@ -1,0 +1,53 @@
+	TO DO LIST
+
+* Disassemble DOSX.EXE to see how it hooks into the NTVDM in order to
+provide DPMI services.	Look at what it does when it hooks INT
+2F/AX=1687.  Maybe we can use a similar mechanism to extend DOSX.EXE.
+Check to see what DPMI functions it provides (0283h would be ideal).
+
+* Write TSR which hooks INT 2F/1687 and catches the Enter DPMI call.
+
+* This TSR (WNTDPMI.EXE) installs itself as the primary DPMI service
+provider.  It launders exception hook services so it gets the first
+call of Page Faults and thus can provide Uncommitted Memory services
+to DPMI clients.  The TSR loads WNTDPMI.VDD to which it communicates
+as needed for memory management services.
+
+* Write WNTDPMI.VDD (actually a DLL) which comunicates with
+WNTDPMI.SYS a Kernel Mode driver for Memory Management services such
+as Uncommitted Memory.
+
+* Write WNTDPMI.SYS which provides calls to VirtualAlloc () for
+Uncommitted Memory.
+
+The presumption is that CR2 can be read from a Kernel Mode driver
+only.  If it can be read from a DLL, then there's no need for the .SYS
+driver.
+
+The .EXE and .VDD can be accommodated in the same file with the .EXE
+portion being the DOS stub for the DLL.
+
+Use RegisterModule () from N:\WINDDK\3790\inc\ddk\wnet\isvbop.h to
+load the DLL.
+
+Use N:\WINDDK\3790\src\vdd\com_vdd\com_vdd.c as model for the VDD (DLL).
+
+
+
+Details for WNTSTUB
+-------------------
+
+*
+
+
+
+
+
+DONE for WNTSTUB
+----------------
+
+* Uninstall
+* Check for already installed
+
+
+

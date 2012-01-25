@@ -1,0 +1,296 @@
+QLINK Documentation File
+
+Overview
+--------
+
+QLINK is a DOS linker and analysis tool designed to link together
+MS-DOS compatible .OBJ files.  It can replace the MS-DOS LINK.EXE
+program when producing MS-DOS compatible .EXE and .COM files.
+
+
+Installation
+------------
+
+Make a directory (e.g., C:\QLINK), copy the zip file to that
+directory, and unzip the files:
+
+MD C:\QLINK
+CD C:\QLINK
+COPY A:\QLINK.ZIP
+PKUNZIP QLINK.ZIP
+
+If you'll be running QLINK under Windows 3.1x (see below for Win95
+instructions), copy the file WINDPMI.386 to your Windows system
+directory.	For example, if you installed Windows into the directory
+C:\WINDOWS, copy WINDPMI.386 to C:\WINDOWS\SYSTEM.	Then edit your
+Windows SYSTEM.INI file to insert a line such as the following in the
+[386ENH] section:
+
+device=windpmi.386
+
+You should first ensure that no other similar line already appears in
+your SYSTEM.INI file.  For example, you might already have a line such
+as
+
+device=c:\bc4\bin\windpmi.386
+
+If this is the case, do not insert another call to the same driver;
+you need only one.	This VxD does not work with Win95 as yet.
+
+If you'll be running QLINK under Win95, follow the above procedure
+using the file W95DPMI.386 instead of WINDPMI.386.
+
+
+
+Benefits
+--------
+
+* One pass linker (using uncommitted memory in DPMI 1.0)
+
+* Better performance (typically twice as fast as MS LINK, sometimes
+  ten times faster)
+
+* Handles USE32 segments > 64KB
+
+* Detailed error checking to the point that it becomes a highly
+  valuable analysis tool
+
+* Detailed error information (e.g., source code line number info (if
+  in .OBJ file) for fixup overflows)
+
+* Type checking between .OBJ files (if in .OBJ files)
+
+
+System Requirements
+-------------------
+
+* MS-DOS 3.x or later
+
+* DPMI host which supports DPMI 1.0 calls -- use either 386MAX version
+  7.0 or later, or Windows 3.1x with a (supplied) VxD from Borland
+  (WINDPMI.386).
+
+
+How To Use
+----------
+
+For the most part, just call QLINK instead of LINK or TLINK as
+appropriate.  Borland users should note that a number of
+Borland-specific Object Module Formats (OMFs) are not implemented as
+yet (I'm waiting for the documentation from Borland).  Several MS link
+switches are not supported as yet (e.g., /PACKC).  If there are
+switches you particularly need which are not supported, let me know.
+For an explanation of the old linker switches, see your linker manual.
+
+
+Tips
+----
+
+To take advantage of the detailed error processing in QLINK, use the
+assembler switches which generate types and line numbers.  For MASM
+and TASM these switches are /Zd and /Zi.
+
+
+Segment Ordering
+----------------
+
+The order in which segments appear in the executable file depends on
+several factors.  The first is whether or not the /DOSSEG switch
+appears explicitly on the command line or implicitly in a OMF record
+in one of the .OBJ files.
+
+If /DOSSEG is specified, the segment order is as follows:
+
+* All segments with a class name ending in 'CODE'
+* All other segments not in DGROUP
+* DGROUP segments in the following order:
+  * Any segments of class 'BEGDATA'
+  * Any segment not of class 'BEGDATA', 'BSS', or 'STACK'
+  * Segments of class 'BSS'
+  * Segments of class 'STACK'
+
+Otherwise, the segment order is as follows:
+
+* All unclassed segments
+* All classed segments by class (that is, segments in the same class
+  appear adjacent to each other).
+
+
+Error Messages
+--------------
+
+There are a number of switches specific to QLINK which are documented
+in the file QLINK.CFG.	These switches control the processing of error
+messages from QLINK.   All error messages begin with either
+
+ออ> WARN:
+
+or
+
+ออ> FAIL:
+
+Messages which begin with WARN are warnings and do not halt the
+linker.  Messages which being with FAIL cause the linker to stop
+immediately and not continue processsing the input files.
+
+If an error message is followed by a name such as FIXOVF or GRPEXT0 in
+parentheses, then that error can be controlled by the switches
+/I:switch, /W:switch, and /F:switch, where 'switch' is the name in
+parentheses in the error message.
+
+If you wish to ignore this error (meaning the linker takes a default
+action and continues processing), use /I:switch.  To warn about an
+error (meaning an error message is displayed, the linker takes a
+default action, and continues processing), use /W:switch.  The default
+settings for all error messages are described in the file QLINK.CFG.
+
+This same file (QLINK.CFG) is consulted when QLINK begins execution.
+Any switches found there (including switches such as /MAP, /LINE,
+etc.) are processed before the command line is parsed.	Switches only
+may be contained in QLINK.CFG, not names of .OBJ files, etc.  Even
+earlier in the process, the environment variable QLINK= is consulted,
+and it too may contain only switches.
+
+Thus the order of processing of switches is first, those contained in
+the environment variable QLINK=, then those in the file QLINK.CFG
+(first in the current directory, and if not found there in the
+directory from which QLINK is loaded), and finally those found on the
+command line to QLINK.	Switches processed later in the sequence
+override ones processed ealier.
+
+
+Future Work
+-----------
+
+In no particular order of importance (nor of expectation of getting
+done), the following topics are on my list:
+
+* Support Borland-specific OMFs
+
+* Support MS-specific OMFs (for which I don't have any examples)
+
+* Incremental linker
+
+* External procedure for symbol processing (instead of reading .MAP
+  file)
+
+* Overlay linker (is this still desirable?)
+
+* Allow group and segment attribute and name changes per .OBJ file
+
+* Generate Windows-compatible .EXEs
+
+* Generate Codeview information
+
+* Generate Turbo Debugger information
+
+* Compress .EXE using LZH or some such technique (for Windows
+  executables as well)
+
+* Finish type checking of structures
+
+* Write VxD for use under Win95 to implement DPMI 1.0 functions.
+
+Please feel free to add to this list.
+
+
+Technical Support
+-----------------
+
+Please contact the author via Internet e-mail at
+
+  bsmith@sudleyplace.com (Bob Smith)
+
+
+QLINK is (C) Copyright 1994-8 Qualitas, Inc.  All rights reserved.
+
+
+Change History
+--------------
+
+1.11	 25 June 1998
+	 * Compare segment and class names case insensitively so as to
+	   mimic MS LINK behavior.
+	 * Fix bug in FIXUPP of Frame Segment, Target External where the
+	   wrong variable was used when checking for FRMSEG errors.
+	 * Round down Frame Base to para boundary before calculating 
+	   fixups.
+
+1.10	 27 April 1998
+	 * Mark THRINV as ignored.	Apparently, MSVC 8 (and possibly
+	   earlier versions) set bit 2 in the method field of a THREAD
+	   subrecord in a FIXUPP record.
+	 * Fix bugs with aliased symbols.
+	 * Fix spurious error report with BAKPAT records.
+
+1.09	 12 March 1998
+	 * Fix bug in parsing of .LIB file on the command line so that
+	   QLINK no longer asks for more .LIB files if one is specified.
+	 * Implement /OPTHEADER (/OP) to optimize the .EXE file header by
+	   rounding the header up to a paragraph boundary instead of a
+	   512-byte boundary.
+
+1.08	 12 November 1997
+	 * Wrote the VxD W95DPMI.386 which provides the appropriate
+	   DPMI 1.0 functions needed for QLINK to run under Win95.
+
+1.07	 8 July 1997
+	 * Add EXTMAT config option to display message if an external in a
+	   module is not referenced by that module.  Presumably (but not
+	   always), these references can be deleted from the source file.
+
+1.06	 25 June 1995
+	 * If /MAP but no explicit entry in mapfile field, create one
+	   anyway.
+	 * Fix bug in fixup of far call to extern in a later segment
+	   which doesn't start on a para boundary.
+	 * Fix bug where /NOE didn't work.
+	 * Fix bug where null para at start of _TEXT not handled.
+
+1.05	 8 May 1995
+	 * Implement /ONERROR:NOEXE.
+	 * Parse and ignore /NOLOGO.
+	 * Parse and warn /PACKCODE:nnn.
+	 * Use FSA to parse .ARF files.
+	 * Change THRINV from always Fail to Ignore, Warn, Fail.
+	 * Support BAKPAT records.
+	 * Support CEXTDEF records.
+	 * Support LLNAMES records.
+	 * Treat extra fields in ARF file as EOF.
+	 * Implement /NOIGNORECASE.
+
+1.04	 25 March 1995
+	 * Allow addition with seg directive, e.g.,
+	   DW (seg PGROUP)+10h.  Note that MS-LINK doesn't handle this
+	   correctly.
+	 * Fix bug in handling of OMF FIXUPP records for Frame &
+	   Target external for self-relative fixups.  This format is
+	   used by MASM 6.10, but neither MASM 5.10b nor 6.11a.
+
+1.03	 14 February 1995
+	 * Allow options occasionally enabled by some Integrated
+	   Development environments which turn off unsupported
+	   features such as
+
+	   /NOPACKCODE
+	   /NOPACKDATA
+	   /NOPACKFUNCTIONS
+
+	 * Also allow (and signal warning) for unsupported features
+
+	   /FARCALLTRANSLATION
+	   /PACKCODE
+	   /PACKDATA
+	   /PACKFUNCTIONS
+
+1.02	 18 November 1994
+	 * Fix bug if QLINK is run w/o DPMI host present.
+	 * Fix misspelling of /NOEXTDICTIONARY.
+
+1.01	 26 October 1994
+	 * Fix bug if searching for library file.
+	 * Write out minimal sized .EXE file.
+
+1.00	 2 October 1994
+	 * Initial release.
+

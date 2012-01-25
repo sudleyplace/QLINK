@@ -1,0 +1,56 @@
+### FIX_FT10 Tgt base (00000000)
+- Frame base          (00000000)
++ Tgt displacement    (000107D2)
+=                      000107D2.
+ออ> WARN:  (FIXOVF) Fixup overflow of 000107D2 at word offset
+    00000003 in segment `_code'
+    Frame group `perty'
+    Target segment `code3'
+    Target offset 000107D2
+    from FIXUPP record in file M1D.OBJ (m1d.ASM)
+    No source code line #s available for this segment.
+### FIX_FT00 Tgt base (000107E0)
+- Frame base          (000107E0)
++ Tgt displacement    (00000000)
+=                      00000000.
+ออ> WARN:  No segment defined with stack combine type.
+QLINK Statistics    7/21/2002 17:32:22
+
+Name             Size   Rounded to 4KB
+--------------------------------------
+TXTSTR            166 bytes       4 KB
+PEROBJ             32             4   
+PERSEG            288             4   
+PERGRP             20             4   
+LINNUM              0             0   
+SYMBOL            352             4   
+SYMHSH              0             0   
+PUBDEF            220             4   
+COMDEF              0             0   
+FIXUPP             88             4   
+SEGOBJ             48             4   
+BAKPAT              0             0   
+IMPDEF              0             0   
+EXPDEF              0             0   
+COMDAT              0             0   
+DEFSEG              0             0   
+EXEHDR            512             4   
+EXEFIL         67,552            68   
+PERMOD              0             0   
+PERCLS             36             4   
+PERLSEG             0             0   
+--------------------------------------
+LNAMES             32             4   
+SEGDEF              4             4   
+GRPDEF              4             4   
+EXTDEF              0             0   
+--------------------------------------
+Subtotal       69,354 bytes     120 KB
+
+code3              46             4   
+_code              16             4   
+$$MODEND            4             4   
+--------------------------------------
+Grand Total    69,420 bytes     132 KB
+Conventional  107,072 bytes
+QLINK error summary:  2 warnings

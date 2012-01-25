@@ -1,0 +1,8 @@
+
+* Remove test for being in RM before checking for DPMI services
+  in case someone writes a RM DPMI host.
+* If /TINY encounters segment fixups, display information on the
+  file and line # of the first such segment fixup in order to make
+  it easier to find.
+
+

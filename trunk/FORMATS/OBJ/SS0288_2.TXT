@@ -1,0 +1,861 @@
+88H COMENT--COMMENT RECORD
+==========================
+
+Description
+-----------
+
+The COMENT record contains a character string that may represent a
+plain text comment, a symbol meaningful to a program such as LIB or
+LINK, or even binary-encoded identification data. An object module can
+contain any number of COMENT records.
+
+History
+-------
+
+New comment classes have been added or changed for LINK386. They are:
+9D, A0, A1, A2, A4, AA, B0, and B1.
+
+Comment class A2 was added for C version 5.0. Histories for comment
+classes A0, A3, A4, A6, A7, and A8 are given later in this section.
+
+68000 and big-endian comments were added for C version 7.0.
+
+Record Format
+-------------
+
+The comment records are actually a group of items, classified by
+comment class.
+
+   1   2        1       1          <-Record Length Minus 3-> 1
+   88  Record   Comment Comment    Commentary Byte String    Checksum
+       Length   Type    Class      (optional)
+
+Comment Type
+------------
+
+The Comment Type field is bit significant; its layout is
+  
+  <-------1 byte----------------------------------------------->
+   NP     NL      0      0       0      0       0      0
+
+where
+
+   NP  (no purge bit) is set if the comment is to be preserved by
+       utility programs that manipulate object modules. This bit can
+       protect an important comment, such as a copyright message,
+       from deletion.
+       
+   NL  (no list bit) is set if the comment is not to be displayed by
+       utility programs that list the contents of object modules.
+       This bit can hide a comment.
+
+The remaining bits are unused and should be set to 0.
+
+Comment Class and Commentary Byte String
+----------------------------------------
+
+The Comment Class field is an 8-bit numeric field that conveys
+information by its value (accompanied by a null byte string) or
+indicates the information to be found in the accompanying byte string.
+The byte string's length is determined from the record length, not by
+an initial count byte.
+
+The values that have been defined (including obsolete values) are the
+following:
+
+   0        Translator     Translator; it may name the source
+                           language or translator. We recommend
+                           that the translator name and version,
+                           plus the optimization level used for
+                           compilation, be recorded here. Other
+                           compiler or assembler options can be
+                           included, although current practice
+                           seems to be to place these under
+                           comment class 9D.
+                           
+   1        Intel          Ignored by LINK. Comments of this class
+            copyright      are used by QuickC for padding.
+                           
+   2 - 9B   Intel          The values from 9C through FF are
+            reserved       ignored by Intel products.
+                           
+   81       Library        Replaced by comment class 9F; contents
+            specifier--    are identical to 9F.
+            obsolete       
+            
+   9C       MS-DOS         The byte string is then 2 bytes and
+            version--      specifies the MS-DOS version number.
+            obsolete       This comment class is not supported by
+                           LINK.
+                           
+   9D       Memory model-  This information is currently generated
+            -ignored       by the C compiler for use by the XENIX
+                           linker; it is ignored by the MS-DOS and
+                           OS/2 versions of LINK. The byte string
+                           consists of from one to three ASCII
+                           characters and indicates the following:
+                           
+                              0, 1, 2,   8086, 80186, 80286, or 
+                              or 3       80386 instructions 
+                                         generated, respectively
+                       
+                              O          Optimization performed on 
+                                         code
+                       
+                              s, m, c,   Small, medium, compact, 
+                              l, or h    large, or huge model
+                       
+                              A, B, C,   68000, 68010, 68020, or 
+                              D          68030 instructions 
+                                         generated, respectively
+                       
+   9E       DOSSEG         Sets Microsoft LINK's DOSSEG switch.
+                           The byte string is null. This record is
+                           included in the startup module in each
+                           language library. It directs the linker
+                           to use the standardized segment
+                           ordering, according to the naming
+                           conventions documented with MS-DOS,
+                           OS/2, and accompanying language
+                           products.
+                           
+   9F       Default        The byte string contains a library
+            library        filename (without a lead count byte and
+            search name    without an extension), which is
+                           searched in order to resolve external
+                           references within the object module.
+                           The default library search can be
+                           overridden with LINK's
+                           /NODEFAULTLIBRARYSEARCH switch.
+                           
+   A0       OMF            This class consists of a set of
+            extensions     records, identified by subtype (first
+                           byte of commentary string). Values
+                           supported by LINK are:
+                           
+            01     IMPDEF     Import definition record. See the
+                              IMPDEF section in this document for
+                              a complete description.
+                              
+            02     EXPDEF     Export definition record. See the
+                              EXPDEF section in this document for
+                              a complete description.
+                              
+            03     INCDEF     Incremental compilation record. See
+                              the INCDEF section in this document
+                              for a complete description.
+                              
+            04     Protected  LINK386 only; relevant only to 32-
+                   memory     bit dynamic-link libraries (DLLs).
+                   library    This comment record is inserted in
+                              an object module by the compiler
+                              when it encounters the _loadds
+                              construct in the source code for a
+                              DLL. LINK then sets a flag in the
+                              header of the executable file (DLL)
+                              to indicate that the DLL should be
+                              loaded in such a way that its shared
+                              data is protected from corruption.
+                              The _loadds keyword tells the
+                              compiler to emit modified function
+                              prolog code, which loads the DS
+                              segment register. (Normal functions
+                              don't need this.)
+                              
+                              When the flag is set in the .EXE
+                              header, the loader loads the
+                              selector of a protected memory area
+                              into DS while performing run-time
+                              fixups (relocations). All other DLLs
+                              and applications get the regular
+                              DGROUP selector, which doesn't allow
+                              access to the protected memory area
+                              set up by the operating system.
+                              
+            05     LNKDIR     C++ linker directives record. See
+                              the LNKDIR section of this document
+                              for a complete description.
+                              
+            06     Big-       The target for this OMF is a big-
+                   endian     endian machine, as opposed to little-
+                              endian or Intel format. (For an
+                              explanation of big-endian and little-
+                              endian, see "On Holy Wars and a Plea
+                              for Peace," by Danny Cohen, pages 48-
+                              54 in "Computer," volume 14, number
+                              10, October 1981.)
+                              
+            07     PRECOMP    When the CodeView information for
+                              this object file is emitted, the
+                              directory entry for $$TYPES is to be
+                              emitted as sstPreComp instead of
+                              sstTypes.
+                              
+            08-FF             Reserved by Microsoft.
+                              
+            NOTE: The presence of any unrecognized
+            subtype (currently, anything greater than
+            07) causes LINK to generate a fatal error.
+            
+   A1   "New OMF"     This comment class is now used solely to
+        extension     indicate the version of the symbolic debug
+                      information. If this comment class is not
+                      present, the oldest format of CodeView
+                      information is written to the .EXE file
+                      produced by LINK. If the comment class is
+                      present, the latest version format of
+                      CodeView information is written.
+                      
+                      This comment class was previously used to
+                      indicate that the obsolete method of
+                      communal representation through TYPDEF and
+                      EXTDEF pairs was not used and that COMDEF
+                      records were used instead. In current
+                      linkers, COMDEF records are always enabled,
+                      even without this comment record present.
+                      
+                      The byte string is currently empty, but the
+                      planned future contents will be a version
+                      number (8-bit numeric field) followed by an
+                      ASCII character string indicating the symbol
+                      style. Values will be:
+                      
+                          n,'C','V  CodeView style
+                      
+                          n,'D','X'  AIX style
+                      
+   A2   LINK Pass     This record conveys information to the
+                      linker about the organization of the file.
+                      The value of the first byte of the
+                      commentary string specifies the comment
+                      subtype. Currently, a single subtype is
+                      defined:
+                   
+                          01            Indicates the start of records 
+                                        generated from LINK Pass 2. 
+                                        Additional bytes may follow, 
+                                        with their number determined 
+                                        by the Record Length field, but 
+                                        they will be ignored by LINK.
+                                        
+                                        See the "Order of Records" 
+                                        section in this document for 
+                                        information on which records must 
+                                        come before and after this comment.
+                                        
+                                          Warning: It is assumed that 
+                                          this comment will not be present 
+                                          in a module whose MODEND record 
+                                          contains a program starting
+                                          address. If there are overlays, 
+                                          LINK needs to see the starting 
+                                          address on Pass 1 to define the 
+                                          symbol $$MAIN.
+                                        
+        NOTE: This comment class may become obsolete with the advent of
+        COMDAT records.
+                        
+   A3   LIBMOD        Library module comment record. Ignored by
+                      LINK; used only by Microsoft's LIB utility.
+                      See the LIBMOD section in this document for
+                      a complete description.
+                      
+   A4   EXESTR        Executable string. See the EXESTR section in
+                      this document for a complete description.
+                      
+   A6   INCERR        Incremental compilation error. See the
+                      INCERR section in this document for a
+                      complete description.
+                      
+   A7   NOPAD         No segment padding. See the NOPAD section in
+                      this document for a complete description.
+                      
+   A8   WKEXT         Weak Extern record. See the WKEXT section in
+                      this document for a complete description.
+                      
+   A9   LZEXT         Lazy Extern record. See the LZEXT section in
+                      this document for a complete description.
+                      
+   AA   PharLap       Possibly obsolete; see the PharLap section
+        format        in this document for a complete description.
+                      
+   B0   Initial IBM   Obsolete.
+        OMF386        
+        format.
+        
+   B1   Record order  Obsolete; part of initial IBM OMF386 format.
+                      
+   DA   Comment       For random comment.
+                      
+   DB   Compiler      For pragma comment(compiler); version
+                      number.
+                      
+   DC   Date          For pragma comment(date stamp).
+                      
+   DD   Timestamp     For pragma comment(timestamp).
+                      
+   DF   User          For pragma comment(user). Sometimes used for
+                      copyright notices.
+                      
+   E9   Dependency    Used to show the include files that were
+        file          used to build this .OBJ file.
+        (Borland)     
+        
+   FF   Command line  Shows the compiler options chosen. May be
+        (QuickC)      obsolete. This record is also used by
+                      Phoenix for library comments.
+                      
+   C0H-   Reserved     Reserved for user-defined comment classes.
+   FFH                 
+   and
+   not
+   other-
+   wise
+   used
+   
+  
+  NOTES
+  
+  Microsoft LIB ignores the Comment Type field.
+  
+  A COMENT record can appear almost anywhere in an object module. Only
+  two restrictions apply:
+  
+  - A COMENT record cannot be placed between a FIXUPP record and  the
+    LEDATA or LIDATA record to which it refers.
+  
+  - A COMENT record cannot be the first or last record in an  object
+    module. (The first record must always be THEADR or LHEADR and  the
+    last must always be MODEND.)
+  
+Examples
+--------
+
+The following three examples are typical COMENT records taken from  an
+object module generated by the Microsoft C Compiler.
+
+This first example is a language-translator comment:
+
+        0  1  2  3  4  5  6  7  8  9  A B C D E  F 
+ 0000   88 07 00 00 00 4D 53 20 43 6E              .....MS Cn
+                                                
+Byte 00H contains 88H, indicating that this is a COMENT record.
+
+Bytes 01-02H contain 0007H, the length of the remainder of the record.
+
+Byte  03H (the Comment Type field ) contains 00H. Bit 7 (no purge)  is
+set  to  0, indicating that this COMENT record may be purged from  the
+object  module  by a utility program that manipulates object  modules.
+Bit 6 (no list) is set to 0, indicating that this comment need not  be
+excluded from any listing of the module's contents. The remaining bits
+are all 0.
+
+Byte 04H (the Comment Class field) contains 00H, indicating that this
+COMENT record contains the name of the language translator that
+generated the object module.
+
+Bytes 05H through 08H contain the name of the language  translator,
+Microsoft C.
+
+Byte 09H contains the Checksum field, 6EH.
+
+
+The second example contains the name of an object library to be
+searched bydefault when LINK processes the object module containing
+this COMENT record:
+
+        0  1  2  3  4  5  6  7  8  9  A  B  C D E F  
+   0000 88 09 00 00 9F 53 4C 49 42 46 50 10        .....SLIBFP
+
+Byte 04H (the Comment Class field) contains 9FH, indicating that this
+record contains the name of a library for LINK to use to resolve
+external references.
+
+Bytes 05-0AH contain the library name, SLIBFP. In this example,  the
+name refers to the Microsoft C Compiler's floating-point function
+library, SLIBFP.LIB.
+
+The last example indicates that LINK should write the most recent
+format of CodeView information to the executable file.
+
+      0  1  2  3  4  5  6  7   8  9  A  B   C  D   E  F  
+0000  88 06 00 00 A1 01 43 56  37                        .....CV7
+
+Byte 04H indicates the comment class, 0A1H.
+
+Bytes 05-07H, which contain the comment string, are ignored by LINK.
+
+
+88H IMPDEF--Import Definition Record (Comment Class A0, Subtype 01)
+===================================================================
+
+Description
+-----------
+
+This record describes the imported names for a module.
+
+History
+-------
+
+This comment class and subtype is a Microsoft extension added for OS/2
+and Windows.
+
+Record Format
+-------------
+
+One import symbol is described; the subrecord format is
+                                               
+   1      1        <variable>   <variable>       2 or <variable>
+   01     Ordinal  Internal     Module           Entry
+          Flag     Name         Name             Ident
+
+where:
+   
+   01              Identifies the subtype as an IMPDEF. It
+                   determines the form of the Entry Ident field.
+                   
+   
+   Ordinal Flag    Is a byte; if 0, the import is identified by
+                   name. If nonzero, it is identified by ordinal. It
+                   determines the form of the Entry Ident field.
+                   
+   Internal Name   Is in <count, char> string format and is the name
+                   used within this module for the import symbol.
+                   This name will occur again in an EXTDEF record.
+                   
+   Module Name     Is in <count, char> string format and is the name
+                   of the module (a DLL) that supplies an export
+                   symbol matching this import.
+                   
+   Entry Ident     Is an ordinal or the name used by the exporting
+                   module for the symbol, depending upon the Ordinal
+                   Flag.
+                   
+                   If this field is an ordinal (Ordinal Flag is
+                   nonzero), it is a 16-bit word. If this is a name
+                   and the first byte of the name is 0, then the
+                   exported name is the same as the imported name
+                   (in the Internal Name field). Otherwise, it is
+                   the imported name in <count, char> string format
+                   (as exported by Module Name).
+                   
+    
+    NOTE: IMPDEF records are created by the utility IMPLIB, which
+    builds an "import library" from a module definition file or DLL.
+
+88H EXPDEF--EXPORT DEFINITION RECORD (COMMENT CLASS A0, SUBTYPE 02)
+===================================================================
+
+Description
+-----------
+   
+This record describes the exported names for a module.
+     
+History
+-------
+
+This comment class and subtype is a Microsoft extension added for C
+version 5.1.
+
+Record Format
+-------------
+
+One exported entry point is described; the subrecord format is
+
+   1      1        <variable>   <variable>       2
+   02     Exported Exported     Internal         Export
+          Flag     Name         Name             Ordinal
+                                                 <conditional>
+
+where:
+
+  02                  Identifies the subtype as an EXPDEF.
+                      
+  Exported Flag       Is a bit-significant 8-bit field with the
+                      following format:
+
+       <-----------------------1 byte---------------------------->
+       Ordinal  Resident    No           Parm Count
+       Bit      Name        Data         
+       1        1           1            <---------5 bits------->
+
+
+         Ordinal Bit  Is set if the item is exported by ordinal; in
+                      this case the Export Ordinal field is present.
+                      
+         Resident     Is set if the exported name is to be kept
+         Name         resident by the system loader; this is an
+                      optimization for frequently used items
+                      imported by name.
+                      
+         No Data      Is set if the entry point does not use
+                      initialized data (either instanced or global).
+                      
+         Parm Count   Is the number of parameter words. The Parm
+                      Count field is set to 0 for all but callgates
+                      to 16-bit segments.
+                      
+   Exported Name   Is in <count, char> string format. Name to be
+                   used when the entry point is imported by name.
+                   
+   Internal Name   Is in <count, char> string format. If the name
+                   length is 0, the internal name is the same as the
+                   Exported Name field. Otherwise, it is the name by
+                   which the entry point is known within this
+                   module. This name will appear as a PUBDEF or
+                   LPUBDEF name.
+                   
+   Export Ordinal  Is present if the Ordinal Bit field is set; it is
+                   a 16-bit numeric field whose value is the ordinal
+                   used (must be nonzero).
+                   
+          
+  NOTES
+  
+  EXPDEFs are produced by Microsoft compilers when the keyword _export
+  is used in a source file.
+  
+  Microsoft LINK limits the value of the Export Ordinal field to
+  16,384 bytes (16K) or less.
+
+
+88H INCDEF--INCREMENTAL COMPILATION RECORD
+(COMMENT CLASS A0, SUBTYPE 03)
+==========================================
+
+Description
+-----------
+
+This record is used for incremental compilation. Every FIXUPP and
+LINNUM record following an INCDEF record will adjust all external
+index values and line number values by the appropriate delta. The
+deltas are cumulative if there is more than one INCDEF record per
+module.
+
+History
+-------
+
+This comment class subtype is a Microsoft extension added for QuickC
+version 2.0.
+
+Record Format
+-------------
+
+The subrecord format is:
+
+   1      2        2            <variable>
+   03     EXTDEF   LINNUM       Padding
+          Delta    Delta        
+
+The EXTDEF Delta and LINNUM Delta fields are signed.
+
+Padding (zeros) is added by QuickC to allow for expansion of the
+object module during incremental compilation and linking.
+  
+  NOTE: Negative deltas are allowed.
+
+
+88H LNKDIR--C++ DIRECTIVES RECORD (COMMENT CLASS A0, SUBTYPE 05)
+=================================-------------------------------
+
+Description
+-----------
+
+This record is used by the compiler to pass directives and flags to
+the linker.
+
+History
+-------
+
+This comment class and subtype is a Microsoft extension added for C
+7.0.
+
+Record Format
+-------------
+
+The subrecord format is:
+
+   1      1        1                1
+   05     Bit      Pseudocode       CodeView
+          Flags    Version          Version
+
+Bit Flags Field
+---------------
+
+The format of the Bit Flags byte is:
+
+   8   1    1    1    1    1    1       1         1 (bits)
+   05  0    0    0    0    0    Run     Omit      New
+                                MPC     CodeView  .EXE
+                                        $PUBLICS
+
+The low-order bit, if set, indicates that LINK should output the new
+.EXE format; this flag is ignored for all but linking of pseudocode (p-
+code) applications. (Pseudocode requires a segmented executable.)
+
+The second low-order bit indicates that LINK should not output the
+$PUBLICS subsection of the CodeView information.
+
+The third low-order bit indicates that MPC (the Make Pseudocode
+utility) should be run.
+
+Pseudocode Version Field
+------------------------
+
+This field is one byte indicating the pseudocode interpreter version
+number.
+
+CodeView Version Field
+----------------------
+
+This field is one byte indicating the CodeView version number.
+
+  NOTE: The presence of this record in an object module will indicate
+  the presence of global symbols records. The linker will not emit a
+  $PUBLICS section for those modules with this comment record and a
+  $SYMBOLS section.
+
+
+88H LIBMOD--LIBRARY MODULE NAME RECORD (COMMENT CLASS A3)
+=========================================================
+
+Description
+-----------
+
+The LIBMOD comment record is used only by the LIB utility, not by
+LINK. It gives the name of an object module within a library, allowing
+LIB to preserve the source filename in the THEADR record and still
+identify the module names that make up the library. Since the module
+name is the base name of the .OBJ file that was built into the
+library, it may be completely different from the final library name.
+
+History
+-------
+
+This comment class and subtype is a Microsoft extension added for LIB
+version 3.07 in MASM version 5.0.
+
+Record Format
+-------------
+
+The subrecord format is:
+
+   1      <variable>
+   A3     Module Name
+
+The record contains only the ASCII string of the module name, in
+<count, char> format. The module name has no path and no extension,
+just the base of the module name.
+
+  NOTES
+  
+  LIB adds a LIBMOD record when an .OBJ file is added to a library and
+  strips the LIBMOD record when an .OBJ file is removed from a
+  library, so typically this record exists only in .LIB files.
+  
+  There will be one LIBMOD record in the library file for each object
+  module that was combined to build the library.
+  
+  
+88H EXESTR--EXECUTABLE STRING RECORD (COMMENT CLASS A4)
+=======================================================
+
+Description
+-----------
+
+The EXESTR comment record implements these ANSI and XENIX/UNIX
+features in C:
+
+   #pragma comment(exestr, <char-sequence>)
+   #ident string
+
+History
+-------
+
+This comment class and subtype is a Microsoft extension added for C
+5.1.
+
+Record Format
+-------------
+
+The subrecord format is:
+
+   1      <variable>
+   A4     Arbitrary Text
+
+The linker will copy the text in the Arbitrary Text field byte for
+byte to the end of the executable file. The text will not be included
+in the program load image.
+  
+  NOTE: If CodeView information is present, the text will not be at
+  the end of the file but somewhere before so as not to interfere with
+  the CodeView signature.
+  
+  There is no limit to the number of EXESTR comment records.
+  
+  
+88H INCERR--INCREMENTAL COMPILATION ERROR (COMMENT CLASS A6)
+============================================================
+
+Description
+-----------
+
+This comment record will cause the linker to terminate with a fatal
+error similar to "invalid object--error encountered during incremental
+compilation."
+
+This behavior is useful when an incremental compilation fails and the
+user tries to link manually. The object module cannot be deleted, in
+order to preserve the base for the next incremental compilation.
+
+History
+-------
+
+This comment class and subtype is a Microsoft extension added for
+QuickC 2.0.
+
+Record Format
+-------------
+
+The subrecord format is:
+
+   1      
+   A6     No Fields
+
+
+88H NOPAD--NO SEGMENT PADDING (COMMENT CLASS A7)
+================================================
+
+Description
+-----------
+
+This comment record identifies a set of segments that are to be
+excluded from the padding imposed with the /PADDATA or /PADCODE
+options.
+
+History
+-------
+
+This comment class and subtype is a Microsoft extension added for
+COBOL. It was added to LINK to support MicroFocus COBOL version 1.2;
+it was added permanently in LINK version 5.11 to support Microsoft
+COBOL version 3.0.
+
+Record Format
+-------------
+
+The subrecord format is:
+
+   1      1 or 2
+   A7     SEGDEF Index
+          <---------repeated---------->
+
+The SEGDEF Index field is the standard OMF index type of 1 or 2 bytes.
+It may be repeated.
+
+
+88H WKEXT--WEAK EXTERN RECORD (COMMENT CLASS A8)
+================================================
+
+Description
+-----------
+
+This record marks a set of external names as "weak," and for every
+weak extern, the record associates another external name to use as the
+default resolution.
+
+History
+-------
+
+This comment class and subtype is a Microsoft extension added for
+Basic version 7.0. There is no construct in Basic that produces it,
+but the record type is manually inserted into Basic library modules.
+
+The first user-accessible construct to produce a weak extern was added
+for MASM version 6.0.
+
+See the "Notes" section below for details on how and why this record
+is used in Basic and MASM.
+
+Record Format
+-------------
+
+The subrecord format is:
+
+   1      1 or 2      1 or 2
+   A8     Weak EXTDEF Default Resolution
+          Index       EXTDEF Index
+          <------------repeated------------>
+
+The Weak EXTDEF Index field is the 1- or 2-byte index to the EXTDEF of
+the extern that is weak.
+
+The Default Resolution EXTDEF Index field is the 1- or 2-byte index to
+the EXTDEF of the extern that will be used to resolve the extern if no
+"stronger" link is found to resolve it.
+  
+  NOTES
+  
+  There are two ways to cancel the "weakness" of a weak extern; both
+  result in the extern becoming a "strong" extern (the same as an
+  EXTDEF). They are:
+  
+    -If a PUBDEF for the weak extern is linked in
+    -If an EXTDEF for the weak extern is found in another module
+     (including libraries)
+  
+  If a weak extern becomes strong, then it must be resolved with a
+  matching PUBDEF, just like a regular EXTDEF. If a weak extern has
+  not become strong by the end of the linking process, then the
+  default resolution is used.
+  
+  If two weak externs for the same symbol in different modules have
+  differing default resolutions, LINK will emit a warning.
+  
+  Weak externs do not query libraries for resolution; if an extern is
+  still weak when libraries are searched, it stays weak and gets the
+  default resolution. However, if a library module is linked in for
+  other reasons (say, to resolve strong externs) and there are EXTDEFs
+  for symbols that were weak, the symbols become strong.
+  
+  For example, suppose there is a weak extern for "var" with a default
+  resolution name of "con". If there is a PUBDEF for "var" in some
+  library module that would not otherwise be linked in, then the
+  library module is not linked in, and any references to "var" are
+  resolved to "con". However, if the library module is linked in for
+  other reasons--for example, to resolve references to a strong extern
+  named "bletch"-- then "var" will be resolved by the PUBDEF from the
+  library, not to the default resolution "con".
+  
+  WKEXTs are best understood by explaining why they were added in the
+  first place. The minimum Basic run-time library in the past
+  consisted of a large amount of code that was always linked in, even
+  for the smallest program. Most of this code was never called
+  directly by the user, but it was called indirectly from other
+  routines in other libraries, so it had to be linked in to resolve
+  the external references.
+  
+  For instance, the floating-point library was linked in even if the
+  user's program did not use floating-point operations, because the
+  PRINT library routine contained calls to the floating-point library
+  for support to print floating-point numbers.
+  
+  The solution was to make the function calls between the libraries
+  into weak externals, with the default resolution set to a small stub
+  routine. If the user never used a language construct or feature that
+  needed the additional library support, then no strong extern would
+  be generated by the compiler and the default resolution (to the stub
+  routine) would be used. However, if the user accessed the library's
+  routines or used constructs that required the library's support, a
+  strong extern would be generated by the compiler to cancel the
+  effect of the weak extern, and the library module would be linked
+  in. This required that the compiler know a lot about which libraries
+  are needed for which constructs, but the resulting executable was
+  much smaller.
+  
+  The construct in MASM 6.0 that produces a weak extern is
+  
+      EXTERN var(con): byte
+  
+  which makes "con" the default resolution for weak extern "var".
+

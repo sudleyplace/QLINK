@@ -1,0 +1,457 @@
+           WELCOME TO BORLAND OPEN ARCHITECTURE UTILITIES 1.0
+         ------------------------------------------------------
+
+  This README contains information on support for the Borland C++
+  Open Architecture Utilities.  Additional information can be found 
+  in the subdirectories associated with each utility.
+
+  For a brief description of the files on the diskette (or diskettes),
+  please refer to the file FILELIST.DOC.
+
+  OPEN ARCHITECTURE UTILITIES SUPPORT
+  -----------------------------------
+
+  The Borland Open Architecture Utilities Source Code is provided
+  for your use and modification.  IMPORTANT: Borland Technical Support
+  will not answer questions or provide any assistance relating to this
+  product.  Essentially, the Sources are provided "as is" and
+  you are on your own.
+
+  If you find what you think is a genuine problem with the source
+  code, we want to hear about it. Technical Support is available
+  from the following sources:
+
+    1. Type GO BOR on the CompuServe bulletin board system for
+    instant access to the Borland forums with their libraries of
+    technical information and answers to common questions.
+
+    If you are not a member of CompuServe, see the special offer 
+    enclosed in the original Borland product you purchased, and write 
+    for full details on how to receive a free IntroPak containing a $15 
+    credit toward your first month's online charges.
+
+    2. Write to:  Borland International
+                  Borland C++ Technical Support
+                  1800 Green Hills Road
+                  P.O. Box 660001
+                  Scotts Valley, CA 95066-0001
+
+                  Attn: Open Architecture Support
+
+    Please remember to include your serial number, or we will be
+    unable to process your letter.
+
+    Please include the following information in your letter
+    of inquiry. 
+
+      A.  Product name and serial number from your original
+          distribution disk.  
+
+      B.  Computer brand, model, and the brands and model numbers
+          of any additional hardware.
+
+      C.  Operating system and version number (The version number
+          can be determined by typing VER at the DOS prompt.).
+
+      D.  Contents of your AUTOEXEC.BAT file.
+
+      E.  Contents of your CONFIG.SYS file.
+
+      F.  A complete description of the problem.
+
+
+CORRECTIONS / ADDITIONS TO THE PRINTED DOCUMENTS
+------------------------------------------------
+
+------------------------------------------------
+THELP.COM
+------------------------------------------------
+
+An updated version of THELP.COM is included on the Borland
+Open Architecture Disk. This version handles small help files
+better than earlier versions of THELP.COM. To avoid conflicts 
+when testing and using your help files please replace any 
+existing versions of THELP.COM with this updated one.
+
+
+---------------------------------------------------------------
+  Borland Help Linker (HL.EXE)
+---------------------------------------------------------------
+
+
+ Syntax: hl [options] < infile | @respfile > [ infile | @respfile ...]
+
+    'infile' is a path to a valid Help Linker script file. (Wild
+    cards ok.) The syntax for these files is discussed below and 
+    in the Borland Open Architecture documentation.
+
+    You can also supply a list of infiles (wildcards ok) in a 
+    response file. (Lines that start with a ';' are ignored 
+    when reading in the response file so you can use those
+    lines for comments.) Filenames do NOT have to start in
+    the first column of the response file (this is stated
+    otherwise in the Borland Open Architecture documentation).
+
+    'options' can go anywhere on the command line and are
+    one or more of the following:
+
+   -? of -H      Help screen
+                 This will dump a quick reference help screen
+
+   -e#           Stop after # error messages
+                 The default is stop after one (1) error. This
+                 switch allows to override the default so you 
+                 can see more errors / warnings when building 
+		 your helpfile.
+
+   -s<filename>  Symbol definition file (default: context.h)
+                 You might choose to assign values to your
+                 screen names (although that is not needed).
+                 If you do, you can supply a 'symbol definition
+                 file'. In the example, we supply you with
+                 a file that is the minimum required for the
+                 file to work under BC++ 3.0 IDE. The syntax
+                 for this file is discussed below and in the
+                 Borland Open Architecture documentation.
+
+   -o<filename>  Output file (default: tchelp.tch)
+                 The name of the resulting linked help file.
+
+   -c            Check for syntax only (no help file created)
+                 With this switch you can reduce your development
+                 time dramatically by simply doing a syntax check 
+                 on the infiles without doing the actual link.
+                 This good for debugging problems in your help
+		 text files.
+
+   -x            Suppress default action of creating an index screen
+                 If your target is THELP.COM and not the BC IDE,
+                 then there is no need to create an INDEX screen
+                 (which is default behavior for the linker).
+                 THELP creates this screen at run-time.
+
+   -p            Create Turbo Pascal format
+                 The Turbo Pascal IDE requires special handling
+                 for the linker, it therefore needs to be told
+                 via this switch that your target is the Turbo
+		 Pascal IDE.
+
+
+     Example
+    ---------
+        Please refer the HL example found on this disk.
+
+
+     General script file syntax
+    ----------------------------
+
+    In general a script file is made of a list of commands.
+    There are two basic types of commands, simple and matched
+    pair. General to both type is the following syntax:
+
+        ;COMMAND [parameters]
+
+    where 
+            ';'             Must be in the first column (flush left)
+                            in the file.
+
+            COMMAND         There must NOT be any whitespace between
+                            the ';' and COMMAND.
+
+                            Commands are case insensitive: Screen,
+                            SCREEN, ScReEn are interpreted all the
+                            same.
+
+            [parameters]    Command specific parameters.
+
+
+    The simple commands are one of:
+	        STAMP
+	        SIGNATURE
+	        VERSION
+	        MAININDEX
+	        KEYWORD
+	        INDEX
+	        COMMENT
+	        INCLUDE
+	        USE
+	        PAGE
+
+
+    The 'matched-pair' form of syntax is:
+
+        ;START-COMMAND  [parameter]
+
+            <free-floating-text>
+
+        ;END-COMMAND
+
+    where 
+
+            START-COMMAND   Is one of:
+	                            SCREEN
+	                            CBEGIN
+
+            END-COMMAND     Is one of:
+	                            ENDSCREEN
+	                            CEND
+
+
+     How to define a screen
+    -------------------------
+
+    A screen definition has the following syntax:
+
+	    ;SCREEN <screen-name>
+            <screen-text>
+        <screen-embedded-commands>
+	    ;ENDSCREEN
+
+    or:
+
+        ;SCREEN <screen-name>
+        ;USE <other-screen-name>
+        ;ENDSCREEN
+         
+    where
+        <screen-name>   Text name for a screen. 
+                        a text name.
+
+        <screen-text>   The text the user will see in the help
+                        window, with possible hot-links to other
+                        screens and cut and paste examples.
+
+        <screen-embedded-commands> is one of:
+                        INCLUDE
+                        INDEX
+                        KEYWORD
+                        MAININDEX
+                        PAGE
+                        USE
+
+        When you want to link another screen to this one (more on
+        that later) the <screen-name> is how you will refer to this
+        screen. <screen-name> will also be used by the linker in
+        reporting errors. Screen size cannot exceed 60k.
+
+        The <screen-text> is whatever you want the user to see.
+
+        Automatic text wrapping:
+            If there is text in the first column of the screen,
+            the text will wrap around as the user resizes the help
+            window at run-time. If there is no text in the first
+            column of the screen (a space character), the text will 
+            not wrap regardless of the re-sizing. 
+
+        Creating a hot-link: 
+            1) Surround the text in the screen with Control-B
+               characters (see the on-disk examples of this).
+               This text will display as highlighted in the
+               user's window. 
+            2) For every hot-link text item, add the ;Keyword
+               command inside the ;Screen/;EndScreen pair.
+               The order of appearance in the text portion
+               of the hot-links (left to right, top to
+               bottom) will determine which ;Keyword 
+               <screen-name> to link to.
+
+        Create cut-and-paste block:
+             Surround the text in the screen with Control-E
+             characters. This text will display as highlighted 
+             in the user's window. The ;Include command makes
+	     organizing cut and paste blocks very easy.
+             (see the on-disk examples of this).
+
+    ;INCLUDE <include-file-name>
+
+        Use this command to include text into a screen.
+        No commands are allowed in this file. 
+        This also allows for text to be shared between
+        help applications.
+
+    ;INDEX <text-for-index-screen>
+
+        Use this command to indicate the index 
+        entries that will bring up this screen. The
+        parameter specifies the exact text that will
+        appear in the index screen (no spaces 
+        allowed). This word will be used as the 
+        context sensitive link. For example, a user
+	places the cursor over a word in an edit window
+ 	and presses Shift-F1. The help system will bring
+	up a help screen (if one exists) that is indexed
+	with the selected word.
+
+        This is no limit to the number of ;Index
+        commands for a screen.
+
+
+    ;KEYWORD <other-screen-name>
+        
+	This command identifies the hyper-text link
+	associated with a particular screen. Each
+	"jump" (text surrounded by ctrl-B characters)
+	imbedded in a help screen must be matched 
+	to a ;keyword "jump to" screen. The order of 
+	;Keyword commands is very important. For more
+	information please see the help example in the
+	HL directory.
+
+
+    ;MAININDEX
+
+        This specifies that this screen will be called
+        up by default as the 'Contents' screen.
+        There can only be one ;MainIndex screen
+        per help file.
+
+
+    ;PAGE <screen-name>
+
+        NOTE: Use this command with caution! There
+              are situations where using this
+              command can cause 'ill-effects'.
+
+        This command is mainly included for backward
+        compatibility with script files created for
+        (very) old IDEs. Its usage has been outdated
+        by the advent of hyper-links and resizing
+        help screens. With the ;Page command inserted 
+        into a screen, you essentially divide the 
+        screen into subsections that the newer IDEs 
+        merge back together anyway.
+
+
+    ;USE <other-screen-name>
+
+        This command allows you to 'alias' a screen.
+        This can be useful when you decide to merge
+        two screens. For example:
+
+        ;Screen Foo
+            This is the foo screen.
+        ;EndScreen
+
+        ;Screen Fee
+        ;Use Foo
+        ;EndScreen
+
+        Every reference to 'Fee' throughout all scripts
+        will map to the 'Foo' screen as in the case:
+
+        ;Screen Fum
+            .
+            .
+        ;Keyword Fee
+        ;EndScreen
+
+
+
+    Misc. script file command reference (in no particular order)
+    --------------------------------------------------------------
+
+	;STAMP <stamp-text>
+
+        Every help file needs to have a Stamp. This means
+        your script files must have one (and only one) ;Stamp command.
+        The <stamp-text> parameter depends on your target 
+        environment: 
+
+            Use this for Turbo Pascal: 
+
+                ;Stamp TURBO PASCAL HELP FILE.
+
+            Use this for BC++ and THELP: 
+
+                ;Stamp TURBO C HELP FILE.
+    
+
+	;SIGNATURE <signature-text>
+
+        Every help file needs to have a Signature. This means
+        your script files must have one (and only one) ;Signature 
+        command. The <signature-text> parameter for all
+        environments is the same:
+
+            ;Signature $*$* &&&&$*$
+        
+
+	;VERSION <version-number>
+
+        Use this command for your own records to keep track
+        of updates to your text.
+
+
+	;COMMENT <comment-text>
+
+        Use this command to add a comment line to your 
+        script files.
+
+
+	;CBEGIN
+        <comment-text>
+	;CEND
+
+        Use the CBegin and CEnd pair to add a comment block
+        to your scrip files. (Comment blocks can live outside
+        screen blocks or embedded into screen blocks). Any
+        and all text between this command pair is ignored
+        by the linker.
+
+
+    Symbol Definition File
+    ------------------------
+
+    The Borland Help Linker works just fine with screens that
+    have text names. Because it is a two pass process, forward
+    references are resolved after the first pass and pose no
+    problem.
+
+    If the only target for your help files are Borland IDEs or
+    THELP.COM, then you need read no further in this section
+    because the text names you are using will work just great.
+
+    If, on the other hand, you are planning to create your
+    own applications that reads or writes these help files, then
+    you probably want to have numeric values assigned to the
+    text used for screen names. This is where the Symbol
+    Definition File is used.
+
+    The Symbol Definition File is a series of 'C' like
+    definitions that assign numeric values to screen names.
+    The syntax for these files is a very specific, very
+    tiny subset of the 'C' language, but can therefore be
+    shared between C and C++ programs, and the Help
+    Linker.
+
+    WARNING: Don't be fooled into thinking that the Help
+             Linker will understand any other 'C'
+             construct other than what is mentioned 
+             below:
+
+             /* These kind of comments are ok */
+             #define HC_<screen-name>  <decimal-constant>
+
+    The <screen-name> matches the <screen-name> parameter
+    to the ;Screen command in the screen script files.
+    The HC_ prefix to the screen name is REQUIRED and 
+    the <decimal-constant> must be a valid base 10 short
+    integer.
+
+    The help compiler will NOT treat the <screen-name>
+    with case sensitivity (this is not like 'C'):
+
+        #define HC_MYSCREEN  100
+        #define HC_MyScreen  101
+
+        This is an ERROR!! MYSCREEN is assigned two values
+
+
+    You specify the name of the Symbol Definition File
+    (you are only allowed one per help file link) on
+    the command line using the -s parameter (see above).
+
+
+
+
+

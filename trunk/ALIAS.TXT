@@ -1,0 +1,26 @@
+
+Alias record (alias -> substitute)
+
+* If the alias is already public, ignore the alias record.
+
+* If the alias is already aliased, signal a warning.
+
+* If the subst is not already public, save a back ptr from
+  subst->alias.
+
+* If the alias becomes public later, the alias is removed.
+
+
+
+SYMFL_SUBST
+
+Means that SYM_SUBST field is valid as the alias SYM_STR, and points
+to the subst symbol
+
+
+SYMFL_ALIAS
+
+Is used to catch duplicate alias records.
+
+
+

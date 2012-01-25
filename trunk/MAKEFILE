@@ -1,0 +1,169 @@
+#' $Header:   P:/PVCS/MISC/QLINK/MAKEFILE.__V   1.6   07 Aug 1998 16:07:20   BOB  $
+NEWDIR=N
+I=$(INCDIR) 	# Path for include files
+M=$(QLNKDIR)		# Main project source directory
+R=			# Generic source directory
+P=$(R);$(M) 	# Search sequence for source
+S=$(SWTDIR) 	# 386SWAT source
+
+# define OEM-specific directories
+OEM=RET 		# Default build type
+O=$(OEM)\		# OEM .obj's and temporary .inc's
+
+# default include path for MASM
+ALLINC=.;$(M);$(M)W95DPMI;$(O);$(I);$(S)
+
+ASM=masm		# Name of assembler
+
+# default options for $(ASM)
+MOPT=$(ASMOPT) /Ml /p /r /t /w1 /Zd
+
+# Define all .OBJ's
+OBJS=	$(O)QLINK.OBJ	 \
+		$(O)QLNK_ARG.OBJ \
+		$(O)QLNK_DMP.OBJ \
+		$(O)QLNK_EXE.OBJ \
+		$(O)QLNK_EXT.OBJ \
+		$(O)QLNK_FCN.OBJ \
+		$(O)QLNK_FIX.OBJ \
+		$(O)QLNK_GRP.OBJ \
+		$(O)QLNK_LIB.OBJ \
+		$(O)QLNK_MAP.OBJ \
+		$(O)QLNK_MSC.OBJ \
+		$(O)QLNK_OBJ.OBJ \
+		$(O)QLNK_OMF.OBJ \
+		$(O)QLNK_PUB.OBJ \
+		$(O)QLNK_SEG.OBJ \
+		$(O)QLNK_STA.OBJ \
+		$(O)QLNK_SYM.OBJ \
+		$(O)QLNK_W95.OBJ \
+		$(O)VERSION.OBJ
+
+# implicit translation rules
+# With typical reverse intuition, the last rules to be defined are the
+# first ones to be applied.
+{$(M)}.asm{$(O)}.obj:
+!IF "$(NEWDIR)" == "Y"
+	copy $(M)$(O)$(@F) $(@D)\.
+!ELSE
+	set INCLUDE=$(ALLINC);$(INCLUDE)
+	$(ASM) %s /DOEM=$(OEM) $(MOPT),$(O);
+	set INCLUDE=$(INCLUDE)
+	@ff $*/,/#
+!ENDIF
+
+
+{$(R)}.asm{$(O)}.obj:
+!IF "$(NEWDIR)" == "Y"
+	copy $(M)$(O)$(@F) $(@D)\.
+!ELSE
+	set INCLUDE=$(ALLINC);$(INCLUDE)
+	$(ASM) %s /DOEM=$(OEM) $(MOPT),$(O);
+	set INCLUDE=$(INCLUDE)
+	@ff $*/,/#
+!ENDIF
+
+
+ALL:	DIR 	\
+!IF "$(NEWDIR)" == "Y"
+	NEWDIR			\
+!ENDIF
+	$(O)QLINK.EXE	\
+	$(SYSDIR)QLINK.EXE
+
+DIR:
+	vdir -c $(O)
+
+!IF "$(NEWDIR)" == "Y"
+NEWDIR: 	{$(P)}PVCS.CFG	{$(P)}MAKEFILE	{$(P)}UDLOCAL.BAT
+	$(COMSPEC) /c <<$(O)MAKEFILE.BAT
+	xc/r/a/n/t $(**: =^
+	xc/r/a/n/t )
+<<NOKEEP
+
+!ENDIF
+
+DEPSCAN = -r$(SRCROOT)
+DEPSCAN = $(DEPSCAN) -t$(M)={$$(P)}
+DEPSCAN = $(DEPSCAN) -p{$$(P)}
+DEPSCAN = $(DEPSCAN) $(R)*.asm $(M)*.asm
+DEPSCAN = $(DEPSCAN) >$(O)qlinkdep.inc
+
+DEPSCAN: {$(P)}MAKEFILE
+	depscan $(DEPSCAN)
+
+{$(P)}MAKEFILE: $(O)qlinkdep.inc
+
+!IF "$(NEWDIR)" == "Y"
+!if [xc/r/a/n/t $(M)$(O)QLINKDEP.INC $(O).]
+!endif
+!ELSE
+!if exist ($(O)qlinkdep.inc) == 0
+!if [depscan $(DEPSCAN)]
+!endif
+!endif
+!include $(O)qlinkdep.inc
+!ENDIF
+
+$(O)VERSION.OBJ:  {$(P)}VERSION.ASM $(VERSION_ADEP)
+
+$(O)QLNK_ARG.OBJ: {$(P)}QLNK_ARG.ASM	$(QLNK_ARG_ADEP)
+
+$(O)QLNK_DMP.OBJ: {$(P)}QLNK_DMP.ASM	$(QLNK_DMP_ADEP)
+
+$(O)QLNK_EXE.OBJ: {$(P)}QLNK_EXE.ASM	$(QLNK_EXE_ADEP)
+
+$(O)QLNK_EXT.OBJ: {$(P)}QLNK_EXT.ASM	$(QLNK_EXT_ADEP)
+
+$(O)QLNK_FCN.OBJ: {$(P)}QLNK_FCN.ASM	$(QLNK_FCN_ADEP)
+
+$(O)QLNK_FIX.OBJ: {$(P)}QLNK_FIX.ASM	$(QLNK_FIX_ADEP)
+
+$(O)QLNK_GRP.OBJ: {$(P)}QLNK_GRP.ASM	$(QLNK_GRP_ADEP)
+
+$(O)QLNK_LIB.OBJ: {$(P)}QLNK_LIB.ASM	$(QLNK_LIB_ADEP)
+
+$(O)QLNK_MAP.OBJ: {$(P)}QLNK_MAP.ASM	$(QLNK_MAP_ADEP)
+
+$(O)QLNK_MSC.OBJ: {$(P)}QLNK_MSC.ASM	$(QLNK_MSC_ADEP)
+
+$(O)QLNK_OBJ.OBJ: {$(P)}QLNK_OBJ.ASM	$(QLNK_OBJ_ADEP)
+
+$(O)QLNK_OMF.OBJ: {$(P)}QLNK_OMF.ASM	$(QLNK_OMF_ADEP)
+
+$(O)QLNK_PUB.OBJ: {$(P)}QLNK_PUB.ASM	$(QLNK_PUB_ADEP)
+
+$(O)QLNK_SEG.OBJ: {$(P)}QLNK_SEG.ASM	$(QLNK_SEG_ADEP)
+
+$(O)QLNK_STA.OBJ: {$(P)}QLNK_STA.ASM	$(QLNK_STA_ADEP)
+
+$(O)QLNK_SYM.OBJ: {$(P)}QLNK_SYM.ASM	$(QLNK_SYM_ADEP)
+
+$(O)QLNK_W95.OBJ: {$(P)}QLNK_W95.ASM	$(QLNK_W95_ADEP)
+
+$(O)QLINK.OBJ:	  {$(P)}QLINK.ASM	$(QLINK_ADEP)
+
+$(O)QLINK.EXE:	$(OBJS) {$(P)}QLINK.WSG {$(P)}MAKEFILE
+!IF "$(NEWDIR)" == "Y"
+	 copy $(M)$(O)$(@B).EXE $(O).
+	 copy $(M)$(O)$(@B).SSF $(O).
+	 copy $(M)$(O)QLINK.MAP  $(O).
+	 xc/r/a/n/t $(M)QLINK.WSG
+!ELSE
+	link @<<$(O)qlink.arf
+$(OBJS: =+^
+)
+	$(O)qlink
+	$(O)qlink /map:full /line /w ;
+<<KEEP
+	mapssf -t$(O)qlink.ssf -wqlink.wsg -v+ $(O)qlink.map
+	@ff $*/,/#
+!ENDIF
+
+$(SYSDIR)QLINK.EXE: $(O)QLINK.EXE
+!IF "$(NEWDIR)" != "Y"
+	xc /r  $(O)QLINK.EXE	$(SYSDIR)
+	xc /r  $(O)QLINK.MAP	$(SYSDIR)
+	xc /r  $(O)QLINK.SSF	$(SYSDIR)
+!ENDIF
+
