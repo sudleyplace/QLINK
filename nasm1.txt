@@ -1,0 +1,40 @@
+
+I must admit my own limited experience with different assemblers.  I
+(and others in my company) did extensive beta testing of MS assemblers
+from early on until they came out with version 6. At that time MS
+introduced so many changes that we would have had to make extensive
+changes to megabytes of source code to be compatible.  I have not used
+any assembler (other than to test) since MASM 5.10b, bugs and all.
+
+I was looking forward to NASM until I saw how different it was from
+MASM.
+
+
+
+There is no need to restrict tools for advanced users.	Ideally, NASM
+should be multiple modes one of which disallows cases which don't make
+any sense.
+
+The same idea applies to type checking.  My bacon has been saved many,
+many a time by the assembler catching a width error I've made (e.g.,
+using AX where I should use EAX on a memory operand declared as a
+dword).
+
+I don't want to ban knives from the kitchen just because you might cut
+yourself; however, I believe that tools should be more helpful.  The
+problem with saying (essentially) that competent programmers know what
+they are doing is the risk that some (particularly assembler)
+programmers might have a higher assessment of their competence than is
+warranted.	Moreover, I know for a fact that my own competence varies
+over time.	I am delighted when the assembler catches an error I've
+made
+
+I am sorry to hear that such things as the ASSUME directive has
+changed definition over time, apparently to one's detriment.
+
+
+The approach NASM has taken is 
+
+
+
+

@@ -1,0 +1,44 @@
+<TITLE>Linear Executable Format (LE)</TITLE>
+<BODY BGCOLOR=White LINK=Red VLINK=Purple>
+
+<H1>Linear Executable Format (LE)</H1>
+<hr>
+
+LE format is used in VxD drivers and DOS4GW executables.
+
+<ol>
+<li><a href="le.zip">LE.ZIP</a>
+<blockquote>
+	Linear Executable Module Format<br>
+	Date: Jul 1993<br>
+</blockquote>
+
+</ol>
+
+In VxD drivers the first entry point in the Entry_Table points to
+the Virtual Driver Descriptor. Its layout it given below:
+
+<pre>
+VxD_Desc_Block STRUC
+DDB_Next                dd  ?                   ; VMM RESERVED FIELD
+DDB_SDK_Version         dw  DDK_Version         ; VMM RESERVED FIELD
+DDB_Req_Device_Number   dw  Undefined_Device_ID ; Required device number
+DDB_Dev_Major_Version   db  0                   ; Major device number
+DDB_Dev_Minor_Version   db  0                   ; Minor device number
+DDB_Flags               dw  0                   ; Flags for init calls complete
+DDB_Name                db  "        "          ; Device name
+DDB_Init_Order          dd  Undefined_Init_Order; Initialization Order
+DDB_Control_Proc        dd  ?                   ; Offset of control procedure
+DDB_V86_API_Proc        dd  0                   ; Offset of API procedure (or 0)
+DDB_PM_API_Proc         dd  0                   ; Offset of API procedure (or 0)
+DDB_V86_API_CSIP        dd  0                   ; CS:IP of API entry point
+DDB_PM_API_CSIP         dd  0                   ; CS:IP of API entry point
+DDB_Reference_Data      dd  ?                   ; Reference data from real mode
+DDB_Service_Table_Ptr   dd  0                   ; Pointer to service table
+DDB_Service_Table_Size  dd  0                   ; Number of services
+VxD_Desc_Block ENDS
+</pre>
+
+<HR>
+</body>
+</html>

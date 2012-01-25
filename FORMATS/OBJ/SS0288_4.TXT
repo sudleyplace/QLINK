@@ -1,0 +1,783 @@
+96H LNAMES--LIST OF NAMES RECORD
+================================
+
+Description
+-----------
+
+The LNAMES record is a list of names that can be referenced by
+subsequent SEGDEF and GRPDEF records in the object module.
+
+The names are ordered by occurrence and referenced by index from
+subsequent records. More than one LNAMES record may appear. The names
+themselves are used as segment, class, group, overlay, and selector
+names.
+
+History
+-------
+
+This record has not changed since the original Intel 8086 OMF
+specification.
+
+Record Format
+-------------
+                                                        
+   1     2             1           <--String Length--> 1
+   96    Record        String      Name String         Checksum
+         Length        Length
+                                                        
+                     <-----------repeated----------->
+
+Each name appears in <count, char> format, and a null name is valid.
+The character set is ASCII. Names can be up to 254 characters long.
+  
+  NOTE: Any LNAMES records in an object module must appear before the
+  records that refer to them. Because it does not refer to any other
+  type of object record, an LNAMES record usually appears near the
+  start of an object module.
+
+Examples
+--------
+
+The following LNAMES record contains the segment and class names
+specified in all three of the following full-segment definitions:
+   
+   _TEXT     SEGMENT byte public 'CODE'
+   _DATA     SEGMENT word public 'DATA'
+   _STACK    SEGMENT para public 'STACK'      
+
+The LNAMES record is:
+
+     0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F  
+0000 96 25 00 00 04 43 4F 44 45 04 44 41 54 41 05 53 .%...CODE.DATA.S.
+0010 54 41 43 4B 05 5F 44 41 54 41 06 5F 53 54 41 43 TACK._DATA._STAC
+0020 4B 05 5F 54 45 58 54 8B                         K._TEXT.
+
+Byte 00H contains 96H, indicating that this is an LNAMES record.
+
+Bytes 01-02H contain 0025H, the length of the remainder of the record.
+
+Byte 03H contains 00H, a zero-length name.
+
+Byte 04H contains 04H, the length of the class name CODE, which is
+found in bytes 05-08H. Bytes 09-26H contain the class names DATA and
+STACK and the segment names _DATA, _STACK, and _TEXT, each preceded by
+1 byte that gives its length.
+
+Byte 27H contains the Checksum field, 8BH.
+
+
+98H OR 99H SEGDEF--SEGMENT DEFINITION RECORD
+============================================
+
+Description
+-----------
+
+The SEGDEF record describes a logical segment in an object module. It
+defines the segment's name, length, and alignment, and the way the
+segment can be combined with other logical segments at bind, link, or
+load time.
+
+Object records that follow a SEGDEF record can refer to it to identify
+a particular segment. The SEGDEF records are ordered by occurrence,
+and are referenced by segment indexes (starting from 1) in subsequent
+records.
+
+History
+-------
+
+Record type 99H is new for LINK386: the Segment Length field is 32
+bits rather than 16 bits, there is one newly implemented alignment
+type (page alignment), the B bit flag of the ACBP byte indicates a
+segment of 4 GB, and the P bit flag of the ACBP byte is the
+Use16/Use32 flag.
+
+Starting with version 2.4, LINK ignores the Overlay Name Index field.
+In versions 2.4 and later, command-line parameters to LINK, rather
+than information contained in object modules, determine the creation
+of run-time overlays.
+
+The length does not include COMDAT records. If selected, their size is
+added.
+
+Record Format
+-------------
+   
+   1      2        <variable>  2 or 4  1 or 2  1 or 2 1 or 2   1
+   98     Record   Segment     Segment Segment Class  Overlay  Checksum
+   or 99  Length   Attributes  Length  Name    Name   Name     
+                                       Index   Index  Index
+
+Segment Attributes Field
+------------------------
+
+The Segment Attributes field is a variable-length field;
+its layout is:
+
+  <-3 bits->  <-3 bits-> <-1 bit-> <-1 bit->  <-2 bytes-->  <--1 byte-->
+  A           C          B         P          Frame Number  Offset
+                                              <conditional> <conditional>
+
+The fields have the following meanings:
+
+   A     Alignment
+         
+         A 3-bit field that specifies the alignment required when
+         this program segment is placed within a logical segment.
+         Its values are:
+         
+           0    Absolute segment.
+                
+           1    Relocatable, byte aligned.
+                
+           2    Relocatable, word (2-byte, 16-bit) aligned.
+                
+           3    Relocatable, paragraph (16-byte) aligned.
+                
+           4    Relocatable, aligned on 256-byte boundary (a "page"
+                in the original Intel specification).
+                
+           5    Relocatable, aligned on a double word (4-byte)
+                boundary. This value is used by the PharLap OMF for
+                the same alignment.
+                
+           6    This value is used by the PharLap OMF for page (4K)
+                alignment. It is not supported by LINK.
+                
+           7    Not defined.
+                
+           The new values for LINK386 are A=4 and A=5. Double word
+           alignment is expected to be useful as 32-bit memory paths
+           become more prevalent. Page-align is useful for certain
+           hardware-defined items (such as page tables) and error
+           avoidance.
+           
+           If A=0, the conditional Frame Number and Offset fields
+           are present and indicate the starting address of the
+           absolute segment. LINK ignores the Offset field.
+           
+           Conflict: The original Intel specification included
+           additional segment-alignment values not supported by
+           Microsoft; alignment 5 now conflicts with the following
+           LINK386 extensions:
+           
+           5    "unnamed absolute portion of memory address space"
+                
+           6    "load-time locatable (LTL), paragraph aligned if not
+                part of any group"
+                
+    C    Combination
+         
+         A 3-bit field that describes how the linker can combine the
+         segment with other segments. Under MS-DOS, segments with
+         the same name and class can be combined in two ways: they
+         can be concatenated to form one logical segment, or they
+         can be overlapped. In the latter case, they have either the
+         same starting address or the same ending address, and they
+         describe a common area in memory. Values for the C field
+         are:
+         
+           0    Private. Do not combine with any other program
+                segment.
+                
+           1    Reserved by IBM. Not supported by Microsoft.
+                
+           2    Public. Combine by appending at an offset that meets
+                the alignment requirement.
+                
+           3    Reserved by IBM. Not supported by Microsoft.
+                
+           4    As defined by Microsoft, same as C=2 (public).
+                
+           5    Stack. Combine as for C=2. This combine type forces
+                byte alignment.
+                
+           6    Common. Combine by overlay using maximum size.
+                
+           7    As defined by Microsoft, same as C=2 (public).
+                
+           Conflict: The Intel specification lists C=1 as Common,
+           not C=6.
+
+  B     Big
+        
+        Used as the high-order bit of the Segment Length field. If
+        this bit is set, the segment length value must be 0. If the
+        record type is 98H and this bit is set, the segment is
+        exactly 64K long. If the record type is 99H and this bit is
+        set, the segment is exactly 2^32 bytes, or 4 GB, long.
+        
+          NOTE: A problem in the 286 chip makes code unreliable if
+          it is executed between bytes 65,500 and 65,535. LINK
+          warns of this problem if code segments reach that size.
+        
+  P     This bit corresponds to the bit field for segment
+        descriptors, known as the B bit for data segments and the D
+        bit for code segments in the Intel documentation.
+        If 0, then the segment is no larger than 64K (if data), and
+        16-bit addressing and operands are the default (if code).
+        This is a Use16 segment.
+       
+        If nonzero, then the segment may be larger than 64K (if
+        data), and 32-bit addressing and operands are the default
+        (if code). This is a Use32 segment.
+        
+           NOTE: This is the only method for defining Use32 segments
+           in the Microsoft OMF. The PharLap OMF uses an additional
+           byte of bit flags at the end of the SEGDEF record to hold
+           this and other flags (described later in this section).
+           Even if the P bit is 0, the PharLap OMF assumes all
+           segments are Use32.
+  
+Segment Length Field
+--------------------
+
+The Segment Length field is a 2- or 4-byte numeric quantity and
+specifies the number of bytes in this program segment. For record type
+98H, the length can be from 0 to 64K; if a segment is exactly 64K, the
+segment length should be 0, and the B field in the ACBP byte should be
+1. For record type 99H, the length can be from 0 to 4 GB; if a segment
+is exactly 4 GB in size, the segment length should be 0 and the B
+field in the ACBP byte should be 1.
+
+Segment Name Index, Class Name Index, Overlay Name Index Fields
+---------------------------------------------------------------
+
+The three name indexes (Segment Name Index, Class Name Index, and
+Overlay Name Index) refer to names that appeared in previous LNAMES
+record(s). LINK ignores the Overlay Name Index field. The full name of
+a segment consists of the segment and class names, and segments in
+different object modules are normally combined according to the A and
+C values if their full names are identical. These indexes must be
+nonzero, although the name itself may be null.
+
+The Segment Name Index field identifies the segment with a name. The
+name need not be unique--other segments of the same name will be
+concatenated onto the first segment with that name. The name may have
+been assigned by the programmer, or it may have been generated by a
+compiler.
+
+The Class Name Index field identifies the segment with a class name
+(such as CODE, FAR_DATA, or STACK). The linker places segments with
+the same class name into a contiguous area of memory in the run-time
+memory map.
+
+The Overlay Name Index field identifies the segment with a run-time
+overlay. It is ignored by current versions of the linker.
+
+PharLap Extensions to This Record
+---------------------------------
+
+In the PharLap 32-bit OMF, there is an additional optional field that
+follows the Overlay Name Index field. The reserved bits should always
+be 0. The format of this field is
+
+   <------------5 bits----------------> <--1 bit-->  <--2 bits-->
+   Reserved                             U            AT
+
+where AT is the access type for the segment and has the following
+possible values
+   
+   0    Read only
+   1    Execute only
+   2    Execute/read
+   3    Read/write
+
+and U is the Use16/Use32 bit for the segment and has the following
+possible values:
+   
+   0    Use16
+   1    Use32
+  
+  Conflicts: The Microsoft-defined OMF has Use16/Use32 stored as the P
+  bit of the ACBP field. Microsoft's OMF does not specify the access
+  for the segment--it is specified in the .DEF file given to LINK.
+  
+  NOTES
+  
+  LINK imposes a limit of 255 SEGDEF records per object module.
+  
+  Certain name/class combinations are reserved for use by CodeView and
+  have special significance to the linker: name $$TYPES with class
+  name DEBTYP, and $$SYMBOLS with class name DEBSYM. See Appendix 1
+  for more information.
+
+Examples
+--------
+
+The following examples of Microsoft assembler SEGMENT directives show
+the resulting values for the A field in the corresponding SEGDEF
+object record:
+   
+   aseg  SEGMENT at 400h              ; A = 0
+   bseg  SEGMENT byte public 'CODE'   ; A = 1
+   cseg  SEGMENT para stack 'STACK'   ; A = 3
+
+The following examples of assembler SEGMENT directives show the
+resulting values for the C field in the corresponding SEGDEF object
+record:
+
+   aseg  SEGMENT at 400H            ; C = 0
+   bseg  SEGMENT public 'DATA'      ; C = 2
+   cseg  SEGMENT stack 'STACK'      ; C = 5
+   dseg  SEGMENT common 'COMMON'    ; C = 6
+
+In this first example, the segment is byte aligned:
+
+        0   1  2  3  4  5  6  7  8  9  A  B  C  D E  F 
+   0000 98  07 00 28 11 00 07 02 01 1E                 ....(.....
+  
+
+Byte 00H contains 98H, indicating that this is a SEGDEF record.
+
+Bytes 01-02H contain 0007H, the length of the remainder of the record.
+
+Byte 03H contains 28H (00101000B), the ACBP byte. Bits 7-5 (the A
+field) contain 1 (001B), indicating that this segment is relocatable
+and byte aligned. Bits 4-2 (the C field) contain 2 (010B), which
+represents a public combine type. (When this object module is linked,
+this segment will be concatenated with all other segments with the
+same name.) Bit 1 (the B field) is 0, indicating that this segment is
+smaller than 64K. Bit 0 (the P field) is ignored and should be 0, as
+it is here.
+
+Bytes 04-05H contain 0011H, the size of the segment in bytes.
+
+Bytes 06-08H index the list of names defined in the module's LNAMES
+record. Byte 06H (the Segment Name Index field) contains 07H, so the
+name of this segment is the seventh name in the LNAMES record. Byte
+07H (the Class Name Index field) contains 02H, so the segment's class
+name is the second name in the LNAMES record. Byte 08H (the Overlay
+Name Index field) contains 1, a reference to the first name in the
+LNAMES record. (This name is usually null, as MS-DOS ignores it
+anyway.)
+
+Byte 09H contains the Checksum field, 1EH.
+
+The second SEGDEF record declares a word-aligned segment. It differs
+only slightly from the first.
+
+     0  1  2  3  4  5  6  7  8  9  A B  C  D  E  F 
+0000 98 07 00 48 0F 00 05 03 01 01                 .. H......
+
+Bits 7-5 (the A field) of byte 03H (the ACBP byte) contain 2 (010B),
+indicating that this segment is relocatable and word aligned.
+
+Bytes 04-05H contain the size of the segment, 000FH.
+
+Byte 06H (the Segment Name Index field) contains 05H, which refers to
+the fifth name in the previous LNAMES record.
+
+Byte 07H (the Class Name Index field) contains 03H, a reference to the
+third name in the LNAMES record.
+
+
+9AH GRPDEF--GROUP DEFINITION RECORD
+===================================
+
+Description
+-----------
+
+This record causes the program segments identified by SEGDEF records
+to be collected together (grouped). For OS/2, the segments are
+combined into a logical segment that is to be addressed through a
+single selector. For MS-DOS, the segments are combined within the same
+64K frame in the run-time memory map.
+
+History
+-------
+
+The special group name "FLAT" was added for LINK386.
+
+Record Format
+-------------
+   
+   1    2        1 or 2     1        1 or 2       1
+   9A   Record   Group Name FF       Segment      Checksum
+        Length   Index      Index    Definition   
+                            <-----repeated----->  
+
+Group Name Field
+----------------
+
+The Group Name field is specified as an index into a previously
+defined LNAMES name and must be nonzero.
+
+Groups from different object modules are combined if their names are
+identical.
+
+Group Components
+----------------
+
+The group's components are segments, specified as indexes into
+previously defined SEGDEF records.
+
+The first byte of each group component is a type field for the
+remainder of the component. LINK requires a type value of FFH and
+always assumes that the component contains a segment index value. See
+the "Notes" section below for other types defined by Intel.
+
+The component fields are usually repeated so that all the segments
+constituting a group can be included in one GRPDEF record.
+  
+  NOTES
+  
+  LINK imposes a limit of 31 GRPDEF records in a single object module
+  and limits the total number of group definitions across all object
+  modules to 31.
+  
+  This record is frequently followed by a THREAD FIXUPP record.
+  
+  The most common group is DGROUP, which is used to group the default
+  data segments (_DATA, CONST, and _BSS).
+  
+  LINK does special handling of the pseudo-group name FLAT for LINK386
+  only. All address references to this group are made as offsets from
+  the Virtual Zero Address, which is the start of the memory image of
+  the executable.
+  
+  The additional group component types defined by Intel and the fields
+  that follow them are:
+  
+    FE   External Index
+    FD   Segment Name Index, Class Name Index, Overlay Name Index
+    FB   LTL Data field, Maximum Group Length, Group Length
+    FA   Frame Number, Offset
+    
+  None of these types is supported by LINK.
+
+Examples
+--------
+
+The example of a GRPDEF record below corresponds to the following
+assembler directive:
+   
+   tgroup GROUP seg1,seg2,seg3
+
+The GRPDEF record is:
+
+     0   1  2   3  4   5  6  7  8   9  A   B  C  D  E F   
+0000 9A  08 00  06 FF  01 FF 02 FF  03 55                 .....U
+
+Byte 00H contains 9AH, indicating that this is a GRPDEF record.
+
+Bytes 01-02H contain 0008H, the length of the remainder of the record.
+
+Byte 03H contains 06H, the Group Name Index field. In this instance,
+the index number refers to the sixth name in the previous LNAMES
+record in the object module. That name is the name of the group of
+segments defined in the remainder of the record.
+
+Bytes 04-05H contain the first of three group component descriptor
+fields. Byte 04H contains the required 0FFH, indicating that the
+subsequent field is a segment index. Byte 05H contains 01H, a segment
+index that refers to the first SEGDEF record in the object module.
+This SEGDEF record declared the first of three segments in the group.
+
+Bytes 06-07H represent the second group component descriptor, this one
+referring to the second SEGDEF record in the object module.
+
+Similarly, bytes 08-09H are a group component descriptor field that
+references the third SEGDEF record.
+
+Byte 0AH contains the Checksum field, 55H.
+
+
+9CH OR 9DH FIXUPP--FIXUP RECORD
+===============================
+
+Description
+-----------
+
+The FIXUPP record contains information that allows the linker to
+resolve (fix up) and eventually relocate references between object
+modules. FIXUPP records describe the LOCATION of each address value to
+be fixed up, the TARGET address to which the fixup refers, and the
+FRAME relative to which the address computation is performed.
+
+History
+-------
+
+Record type 9DH is new for LINK386; it has a Target Displacement field
+of 32 bits rather than 16 bits, and the Location field of the Locat
+word has been extended to 4 bits (using the previously unused higher
+order S bit) to allow new LOCATION values of 9, 11, and 13.
+
+Record Format
+-------------
+   
+   1          2          <------from Record Length----->  1
+   9C         Record     THREAD subrecord or              Checksum
+   or 9D      Length     FIXUP subrecord                  
+                         <--------repeated------------->  
+
+Each subrecord in a FIXUPP object record either defines a thread for
+subsequent use, or refers to a data location in the nearest previous
+LEDATA or LIDATA record. The high-order bit of the subrecord
+determines the subrecord type: if the high-order bit is 0, the
+subrecord is a THREAD subrecord; if the high-order bit is 1, the
+subrecord is a FIXUP subrecord. Subrecords of different types can be
+mixed within one object record.
+
+Information that determines how to resolve a reference can be
+specified explicitly in a FIXUP subrecord, or it can be specified
+within a FIXUP subrecord by a reference to a previous THREAD
+subrecord. A THREAD subrecord describes only the method to be used by
+the linker to refer to a particular target or frame. Because the same
+THREAD subrecord can be referenced in several subsequent FIXUP
+subrecords, a FIXUPP object record that uses THREAD subrecords may be
+smaller than one in which THREAD subrecords are not used.
+
+THREAD subrecords can be referenced in the same object record in which
+they appear and also in subsequent FIXUPP object records.
+
+THREAD Subrecord
+----------------
+
+There are four FRAME threads and four TARGET threads; not all need be
+defined, and they can be redefined by later THREAD subrecords in the
+same or later FIXUPP object records. The FRAME threads are used to
+specify the Frame Datum field in a later FIXUP subrecord; the TARGET
+threads are used to specify the Target Datum field in a later FIXUP
+subrecord.
+
+A THREAD subrecord does not require that a previous LEDATA or LIDATA
+record occur.
+
+The layout of the THREAD subrecord is as follows:
+
+   <--------------1 byte-------------------->  <---1 or 2 bytes--->
+   0      D       0      Method     Thred      Index
+   1      1       1      3          2 (bits)   <---conditional---->
+
+where:
+
+   0      The high-order bit is 0 to indicate that this is a THREAD
+          subrecord.
+          
+   D      Is 0 for a TARGET thread, 1 for a FRAME thread.
+          
+   Method Is a 3-bit field.
+      
+          For TARGET threads, only the lower two bits of the field
+          are used; the high-order bit of the method is derived from
+          the P bit in the Fix Data field of FIXUP subrecords that
+          refer to this thread. (The full list of methods is given
+          here for completeness.) This field determines the kind of
+          index required to specify the Target Datum field.
+          
+            T0   Specified by a SEGDEF index.
+                 
+            T1   Specified by a GRPDEF index.
+                 
+            T2   Specified by a EXTDEF index.
+                 
+            T3   Specified by an explicit frame number (not
+                 supported by LINK).
+                 
+            T4   Specified by a SEGDEF index only; the displacement
+                 in the FIXUP subrecord is assumed to be 0.
+                 
+            T5   Specified by a GRPDEF index only; the displacement
+                 in the FIXUP subrecord is assumed to be 0.
+                 
+            T6   Specified by a EXTDEF index only; the displacement
+                 in the FIXUP subrecord is assumed to be 0.
+                 
+                 The index type specified by the TARGET thread
+                 method is encoded in the Index field.
+                 
+                 For FRAME threads, the Method field determines the
+                 Frame Datum field of subsequent FIXUP subrecords
+                 that refer to this thread. Values for the Method
+                 field are:
+                 
+                    F0    The FRAME is specified by a SEGDEF index.
+                          
+                    F1    The FRAME is specified by a GRPDEF index.
+                          
+                    F2    The FRAME is specified by a EXTDEF index.
+                          LINK determines the FRAME from the external
+                          name's corresponding PUBDEF record in
+                          another object module, which specifies
+                          either a logical segment or a group.
+                          
+                    F3    Invalid. (The FRAME is identified by an
+                          explicit frame number; this is not
+                          supported by LINK.)
+                          
+                    F4    The FRAME is determined by the segment
+                          index of the previous LEDATA or LIDATA
+                          record (that is, the segment in which the
+                          location is defined).
+                          
+                    F5    The FRAME is determined by the TARGET's
+                          segment, group, or external index.
+                          
+                    F6    Invalid.
+                          
+                          NOTE: The Index field is present for FRAME
+                          methods F0, F1, and F2 only.
+                          
+   Thred  A 2-bit field that determines the thread number (0 through
+          3, for the four threads of each kind).
+   Index  A conditional field that contains an index value that
+          refers to a previous SEGDEF, GRPDEF, or EXTDEF record. The
+          field is present only if the thread method is 0, 1, or 2.
+          (If method 3 were supported by LINK, the Index field would
+          contain an explicit frame number.)
+
+FIXUP Subrecord
+---------------
+
+A FIXUP subrecord gives the how/what/why/where/who information
+required to resolve or relocate a reference when program segments are
+combined or placed within logical segments. It applies to the nearest
+previous LEDATA or LIDATA record, which must be defined before the
+FIXUP subrecord. The FIXUP subrecord is as follows
+
+   2      1               1 or 2         1 or 2          2 or 4
+   Locat  Fix             Frame          Target          Target
+          Data            Datum          Datum           Displacement
+          <conditional>   <conditional>  <conditional>   
+
+where the Locat field has an unusual format. Contrary to the usual
+byte order in Intel data structures, the most significant bits of the
+Locat field are found in the low-order, rather than the high-order,
+byte
+   
+   <-----low-order byte----><----high-order byte--->
+   1    M   Location        Data Record Offset
+   1    1   4               10 (bits)
+
+where:
+
+   1          The high-order bit of the low-order byte is set to
+              indicate a FIXUP subrecord.
+              
+   M          Is the mode; M=1 for segment-relative fixups, and M=0
+              for self-relative fixups.
+              
+   Location   Is a 4-bit field that determines what type of LOCATION
+              is to be fixed up:
+              
+                0    Low-order byte (8-bit displacement or low byte
+                     of 16-bit offset).
+                     
+                1    16-bit offset.
+                     
+                2    16-bit base--logical segment base (selector).
+                     
+                3    32-bit Long pointer (16-bit base:16-bit
+                     offset).
+                     
+                4    High-order byte (high byte of 16-bit offset).
+                     LINK does not support this type.
+                     
+                5    16-bit loader-resolved offset, treated as
+                     Location=1 by the linker.
+                     
+                     Conflict: The PharLap OMF uses Location=5 to
+                     indicate a 32-bit offset, whereas Microsoft
+                     uses Location=9.
+                     
+                6    Not defined, reserved.
+                    
+                       Conflict: The PharLap OMF uses Location=6 to
+                       indicate a 48-bit pointer (16-bit base:32-bit
+                       offset), whereas Microsoft uses Location=11.
+                    
+                7    Not defined, reserved.
+                     
+                9    32-bit offset.
+                     
+                11   48-bit pointer (16-bit base:32-bit offset).
+                     
+                13   32-bit loader-resolved offset, treated as
+                     Location=9 by the linker.
+                     
+   Data       Indicates the position of the LOCATION to be fixed up
+   Record     in the LEDATA or LIDATA record immediately preceding
+   Offset     the FIXUPP record. This offset indicates either a byte
+              in the Data Bytes field of an LEDATA record or a data
+              byte in the Content field of a Data Block field in an
+              LIDATA record.
+
+The Fix Data bit layout is
+
+   F    Frame  T    P    Targt
+   1    3      1    1    2 (bits)
+
+and is interpreted as follows:
+
+   F        If F=1, the FRAME is given by a FRAME thread whose
+            number is in the Frame field (modulo 4). There is no
+            Frame Datum field in the subrecord.
+            
+            If F=0, the FRAME method (in the range F0 to F5) is
+            explicitly defined in this FIXUP subrecord. The method
+            is stored in the Frame field.
+            
+   Frame    A 3-bit numeric field, interpreted according to the F
+            bit. The Frame Datum field is present and is an index
+            field for FRAME methods F0, F1, and F2 only.
+            
+   T        If T=1, the TARGET is defined by a TARGET thread whose
+            thread number is given in the 2-bit Targt field. The
+            Targt field contains a number between 0 and 3 that
+            refers to a previous THREAD subrecord containing the
+            TARGET method. The P bit, combined with the two low-
+            order bits of the Method field in the THREAD subrecord,
+            determines the TARGET method.
+            
+            If T=0, the TARGET is specified explicitly in this FIXUP
+            subrecord. In this case, the P bit and the Targt field
+            can be considered a 3-bit field analogous to the Frame
+            field.
+            
+   P        Determines whether the Target Displacement field is
+            present.
+            
+            If P=1, there is no Target Displacement field.
+            
+            If P=0, the Target Displacement field is present. It is
+            a 4-byte field if the record type is 9DH; it is a 2-byte
+            field otherwise.
+            
+   Targt    A 2-bit numeric field, which gives the lower two bits of
+            the TARGET method (if T=0) or gives the TARGET thread
+            number (if T=1).
+
+Frame Datum, Target Datum, and Target Displacement Fields
+---------------------------------------------------------
+
+The Frame Datum field is an index field that refers to a previous
+SEGDEF, GRPDEF, or EXTDEF record, depending on the FRAME method.
+
+Similarly, the Target Datum field contains a segment index, a group
+index, or an external name index, depending on the TARGET method.
+
+The Target Displacement field, a 16-bit or 32-bit field, is present
+only if the P bit in the Fix Data field is set to 0, in which case the
+Target Displacement field contains the offset used in methods 0, 1,
+and 2 of specifying a TARGET.
+  
+  NOTES
+  
+  FIXUPP records are used to fix references in the immediately
+  preceding LEDATA, LIDATA, or COMDAT record.
+  
+  The Frame field is the translator's way of telling the linker the
+  contents of the segment register used for the reference; the TARGET
+  is the item being referenced whose address was not completely
+  resolved by the translator. In protected mode, the only legal
+  segment register values are selectors; every segment and group of
+  segments is mapped through some selector and addressed by an offset
+  within the underlying memory defined by that selector.
+
+Examples
+--------
+
+Due to the incredible length of the FIXUPP examples in "The MS-DOS
+Encyclopedia," they are not repeated here. However, the examples are
+highly recommended if you want to understand what is happening.
+

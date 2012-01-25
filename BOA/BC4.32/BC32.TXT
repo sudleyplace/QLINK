@@ -1,0 +1,3508 @@
+      Copyright (c) 1993 Borland International, Inc.
+                       All Rights Reserved
+
+		
+Symbolic Debugging Information
+
+This version of the Symbol and Type OMF information is a complete redesign.
+The effect of the design is to move from treating the debug information  as
+a byte stream to treating  it as a stream  of structures.  Field sizes  and
+arrangement have been  changed to maintain  "natural alignment" to  improve
+performance.  Natural alignment indicates that a field begins on an address
+that is divisible  by the  size of  the field.   For example,  a four  byte
+(long) value begins on an address  that is evenly divisible by four.   Some
+architectures, such as the MIPS R4000, impose an severe penalty for loading
+data that is not in natural alignment.   Even for the Intel 80 386 and  486
+processors, there is a significant  improvement processing data that is  in
+natural alignment.
+
+Compilers that emit Symbol  and Type  OMF according  to this  specification
+indicate so by placing  a signature of 0x00000002  at the beginning of  the
+$$BSYMS, $$BTYPES tables, and a 0x00000001 at the beginning of the $$BNAMES
+table.
+
+The format of the symbol records has been changed.  The length field at the
+beginning of the symbol  records are  now two  bytes rather  than one,  the
+symbol index is now two bytes rather than one, and the symbol indices  have
+been renumbered.  The format of  type records has  also been changed.   The
+linkage field at the  beginning of each type  record, which has never  been
+used, has been eliminated.  Leaf indices have been changed from one byte to
+two bytes and renumbered.  Field sizes and arrangement have been changed to
+maintain "natural alignment".   The definition of  unused records has  been
+removed from the specification.
+
+In all structure  descriptions  and  value  enumerations,  all  values  not
+specified in this document are reserved for future use.
+
+Logical segments
+
+When the linker emits address information about  a symbol, it is done in  a
+segment: offset format.  The segment is a logical segment index assigned by
+the linker and the offset is the  offset from the beginning of the  logical
+segment.  The physical address is assigned by the operating system when the
+program is loaded.
+
+Lexical scope linkage
+
+The model of a  program envisioned by this  document is that programs  have
+nested scopes.  The outermost scope  is module scope which encompasses  all
+of the symbols not defined within  any inner (lexical) scope.  Symbols  and
+types defined at one scoping level are visible to all scopes nested  within
+it.  Symbols and  types defined at  module scope are  visible to all  inner
+scopes.
+
+The next level of scoping is  "function"  scope,  which  in  turn  contains
+lexical blocks (including other  functions  scopes)  that  can  be  further
+nested.  Nested lexical scopes  are opened by  a procedure, method,  thunk,
+with, or block start symbol.   They are  closed by  the matching  block-end
+symbol.
+
+To improve performance, the lexical scopes are linked so that the symbols
+for inner lexical scopes do not have to be searched.  Symbols that can
+begin an outermost lexical scope have three fields defined for linkage:
+
+        Field           Linkage
+
+	pParent       	Local procedures, global  procedures, thunk  start,
+			with start, and block start.   If the scope has  no
+			enclosing lexical scopes,  then  pParent  is  zero.
+			Otherwise, the parent of  this scope is the  offset
+			from the start of the symbol table for this  module
+			to the symbol for  the  scope  that  encloses  this
+			scope but encloses no  other  scope  that  encloses
+			this scope.
+
+	pNext       	Start  search  and  for  local  procedures,  global
+			procedures,  and  thunk  start  if  they  are   the
+			outermost lexical  scope.  The  pNext field,  along
+			with the start search  symbol, defines  a group  of
+			lexically scoped symbols that share a code  segment
+			(or  object)  within  a  symbol  table.   For  each
+			segment (object) represented  in the symbol  table,
+			there is a search  symbol that contains the  offset
+			from the start  of the symbols  for this module  to
+			the first  procedure  or  thunk  contained  in  the
+			segment.  Each outermost lexical scope symbol has a
+			next field  containing  the  next  outermost  scope
+			symbol  contained   in  the   segment.   The   last
+			outermost  scope  in  the  symbol  table  for  each
+			segment has a next field of zero.
+
+	pEnd       	This field is defined for local procedures,  global
+			procedures, thunk,  block, and  with symbols.   The
+			end field contains the offset from the start of the
+			symbols for this module  to the matching block  end
+			symbol that terminates the lexical scope.
+
+
+Numeric leaves
+
+When the symbol or type processor knows that a numeric leaf is present,  it
+examines the next two bytes of the symbol or type string.  If the value  of
+these two bytes is less  than  LF_NUMERIC  (0x8000),  then  the  two  bytes
+contain the actual numeric value.  If the value is greater than or equal to
+LF_NUMERIC (0x8000), then the numeric data follows the two-byte leaf  index
+and is contained in the number of bytes specified by the leaf index.  It is
+the responsibility  of  routines  reading  numeric  fields  to  handle  the
+potential non alignment of the  data fields.   See the  section on  numeric
+leafs for details.
+
+Types Definition Segment
+
+All Symbol and Type OMF records for which a type index field is part of the
+specification must have a valid type  index.   The  one  exception  is  for
+public symbols from  modules compiled  without Borland 32 bit symbol information.   In
+this case, a type index of 0x0000 is permitted.  Since many types (relating
+to hardware primitives) are common, type index values less than 0x0000  are
+reserved for a set of  predefined primitive  types.  A  list of  predefined
+types and their  indices are  defined in  this document.   Type indices  of
+0x1000 and higher are used to index into the set of type definitions in the
+module's $$BTYPES segment.  Thus  0x1000  is  the  first  type,  0x1001  the
+second, and so on.  Type indices must be sequential and contain no gaps  in
+the numbering.
+
+
+$$BSYMS and $$BTYPES Segment Definitions
+
+$$BTYPES Segment Definition
+
+Type information appears in  OMF-286 TYPDEF format  as LEDATA records  that
+contribute to the special $$BTYPES debug segment.  A SEGDEF record for this
+segment must be produced in each  module that contains Symbol and Type  OMF
+type information and have these attributes:
+
+        Name:           $$BTYPES
+        Class:          DEBTYP
+
+The first four bytes of the $$BTYPES table is used as a signature to specify
+the version of the  Symbol and Type OMF  contained in the $$BTYPES  segment.
+
+$$BSYMS Segment Definition
+
+Symbol information appears in OMF-286 TYPDEF format as LEDATA records  that
+contribute to the special  $$BSYMS debug  segment.  A  SEGDEF record  for
+this segment must be produced in each module that contains Symbol and  Type
+OMF symbol information and have these attributes:
+
+        Name:           $$BSYMS
+        Class:          DEBSYM
+
+The first four bytes of  the $$BSYMS  segment is  used as  a signature  to
+specify the version of the Symbol  and Type OMF contained in the  $$BSYMS
+segment.
+
+Symbols
+
+Format of Symbol Records
+
+Data in the $$BSYMS segment is a series of symbol records with the format
+
+        DW      Length   //  Length of record, excluding the length field.
+	DW      Index    //  Type of symbol
+        *       data...  //  Data specific to each symbol format
+
+The symbol records are described  below.   Numbers  above  fields  indicate
+length in bytes, and * means variable length in the following section.
+
+Symbol indices  are broken  in to  three ranges.   The first  range is  for
+symbols whose format  does not  change with  the compilation  model of  the
+program  or   the  target   machine.   These   include  register   symbols,
+user-defined type symbols,  and so  on.  The  second range  of symbols  are
+those that contain 16:16  segmented addresses.  The  third symbol range  is
+for symbols that contain 16:32  addresses.  Note that  even for flat  model
+programs, there is an implied segment for every symbol.  For  architectures
+that do not have segment registers, the segment portion of a 16:32  address
+is zero.  The symbol  indices are  listed below,  and each  record is  then
+described in the following sections.
+
+The symbol records are formatted  such that most  fields fall into  natural
+alignment if the  symbol length field  is placed on  a long word  boundary.
+For all symbols, the variable length data has been moved to the end of  the
+symbol structure.  Note specifically  that  fields  that  contain  data  in
+potentially nonaligned numeric fields must  either pay the load penalty  or
+first do a  byte wise  copy of  the data  to a  memory that  is in  natural
+alignment.  Please refer to the description of the type records for details
+about numeric leaves.
+
+Compilers do not have to  emit padding  bytes between  symbols to  maintain
+natural alignment.  The  linker  places  the  symbols  into  the
+executable files in natural alignment and pads the symbol lengths to  force
+alignment.
+
+Symbol Indices
+
+        0x0001     S_COMPILE     Compile flags symbol
+        0x0002     S_REGISTER    Register variable
+        0x0003     S_CONST       Constant symbol
+        0x0004     S_UDT         User-defined Type
+        0x0005     S_SSEARCH     Start search
+        0x0006     S_END         End block, procedure, with, or thunk
+        0x0007     S_SKIP        Skip - Reserve symbol space
+        0x0008     S_CVRESERVE   Reserved for Code View internal use
+        0x0009     S_OBJNAME     Specify name of object file
+
+        0x0100     S_BPREL16     BP relative 16:16
+        0x0101     S_LDATA16     Local data 16:16
+        0x0102     S_GDATA16     Global data 16:16
+        0x0103     S_PUB16       Public symbol 16:16
+        0x0104     S_LPROC16     Local procedure start 16:16
+        0x0105     S_GPROC16     Global procedure start 16:16
+        0x0106     S_THUNK16     Thunk start 16:16
+        0x0107     S_BLOCK16     Block start 16:16
+        0x0108     S_WITH16      With start 16:16
+        0x0109     S_LABEL16     Code label 16:16
+        0x010a     S_CEXMODEL16  Change execution model 16:16
+        0x010b     S_VFTPATH16   Virtual function table path descriptor 16:16
+
+        0x0200     S_BPREL32     BP relative 16:32
+        0x0201     S_LDATA32     Local data 16:32
+        0x0202     S_GDATA32     Global data 16:32
+        0x0203     S_PUB32       Public symbol 16:32
+        0x0204     S_LPROC32     Local procedure start 16:32
+        0x0205     S_GPROC32     Global procedure start 16:32
+        0x0206     S_THUNK32     Thunk start 16:32
+        0x0207     S_BLOCK32     Block start 16:32
+        0x0208     S_WITH32      With start 16:32
+        0x0209     S_LABEL32     Label 16:32
+        0x020a     S_CEXMODEL32  Change execution model 16:32
+        0x020b     S_VFTPATH32   Virtual function table path descriptor 16:32
+
+
+Compile Flag
+S_COMPILE	0x0001
+
+This symbol communicates to Code  View compile  time information  on a  per
+module basis, such as the language and version number of the compiler,  the
+ambient model for code and data, and the target processor.
+
+                DW              Length
+                DW              S_COMPILE
+                DB              machine
+                DB,DW           flags
+                *               version
+
+	machine       	enumeration specifying  target  processor.   Values
+			not specified below are reserved:
+
+        0x00    	Intel 8080
+        0x01    	Intel 8086
+        0x02    	Intel 80286
+        0x03    	Intel 80386
+        0x04    	Intel 80486
+        0x10    	MIPS R4000
+
+	flags       	   flags showing compile time options:
+
+        Language                :8
+        PCodePresent            :1
+        FloatPrecision          :2
+        FloatPackage            :2
+        AmbientData             :3
+        AmbientCode             :3
+        Mode32                  :1    	Compiled for 32 bit addresses
+	chsign			:1	True is 'char' is a signed type
+        Reserved                :3
+
+                Language enumeration:
+                0       C
+                1       C++
+                2       FORTRAN
+                3       Masm
+                4       Pascal
+                5       Basic
+                6       COBOL
+                7-255   Reserved
+
+                Ambient code and data memory model enumeration
+                0       Near
+                1       Far
+                2       Huge
+                3-7     Reserved
+
+                Floating package enumeration
+                0       Hardware processor (80x87 for Intel 80x86 processors)
+                1       Emulator
+                2       Altmath
+                3       Reserved
+
+		The FloatPrecision flag is set  to 1 if the  -OP option was enabled  during
+		the compilation.
+
+	version       	Length-prefixed string specifying compiler version.
+			Compilers can  place  additional  data  in  version
+			string if desired.
+
+Register
+S_REGISTER	0x0002
+
+This symbol record describes a symbol that has been registered:
+
+        DW      Length
+        DW      S_REGISTER
+        DD      @type
+        DW      register
+        DD      @name
+        DD	reserved
+
+	type       	The type of the symbol
+	
+	register       	Enumerate of the  registers  in  which  the  symbol
+			value is stored.  This  field  is  treated  as  two
+			bytes.  The high order byte specifies the  register
+			that the high  order part of  the value is  stored.
+			The low  byte specifies  the register  for the  low
+			order part of the  value.   If  the  value  is  not
+			stored in two  registers then  high order  register
+			field contains the enumerate value for no register.
+			For register  enumeration values,  see below.   The
+			register  index  enumeration  is  specific  to  the
+			processor   model    for    the    module.     name
+			Length-prefixed name of  the symbol  stored in  the
+			register
+
+	@name		Name index of the symbol
+	
+	reserved	0
+
+Constant
+S_CONSTANT	0x0003
+
+This record is used to output FORTRAN and C constants and C enums.  If used
+to output an enum, then the type index refers to the containing enum.
+
+        DW      length
+        DW      S_CONSTANT
+        DD      @type
+        DD      @name
+        DD	reserved
+        *       value
+
+        @type           Type of symbol
+        @name           name index of the constant
+        value           Numeric leaf containing the value of symbol
+	reserved	0
+
+User-defined type
+S_UDT		0x0004
+
+This specifies a C type or user-defined type, such as classes,  structures,
+unions, or enums.  This  symbol allows for scoped  searches of a type  name
+and casting to a user-defined type.  S_UDT symbols are moved to either  the
+sstGlobalSym section or an sstAlignSym  section, depending on the scope  in
+which they are defined.  If the S_UDT is emitted at top level scope, it  is
+moved to the sstGlobalSym  section.  Otherwise it  goes to the  sstAlignSym
+section of the module in which it was defined.
+
+        DW      length
+        DW      S_UDT
+        DD      @type
+	DW	property
+        DD      @name
+        DD	reserved
+
+
+	@type		Type index of the type
+
+	property
+	  istag		:1	True if this is a tag (not a typedef)
+	  isnest	:1	True if the type is a nested type (its name
+				will be 'class_name::type_name' in that
+				case)
+
+	@name		Name index of the type
+	
+	reserved	0	
+
+Start Search
+S_SSEARCH	0x0005
+
+These records are always the  first symbol records  in a module's  $$BSYMS
+section.  There is one  Start Search symbol for  each segment to which  the
+module contributes code.  Each  symbol  contains  the  segment  number  and
+$$BSYMS offset  of the  record of  the first  procedure or  thunk in  this
+module that physically appears in the specified segment of the load  image.
+This is the  symbol used  to initiate  CS:IP searches  within this  module.
+These symbols are used to perform lexical scope searching of symbols.   The
+linker or packer creates this  symbol.   Translators  do  not  create  this
+symbol.
+
+        DW      length
+        DW      S_SSEARCH
+        DD      sym off
+        DW      segment
+	DW	LPROC/GPROC/THUNK count
+	DW	LDATA count
+	DD	firstLDATA
+
+	start sym       $$BSYMS offset of  the procedure  or thunk  record
+			for this module that has the lowest offset for  the
+			specified segment.   See  the  section  on  lexical
+			scope linking.
+
+        segment         Segment that this Start Search refers to
+
+	codeCount	Total number of all LPROCxx, GPROCxx and THUNKxx
+			symbols in this sstAlignSym section for the segment
+			specified by the SSEARCH symbol.
+			
+	dataCount	Total number of all LDATAxx symbols in this
+			sstAlignSym section for the segment specified by
+			the SSEARCH symbol.
+
+	firstLDATA	Offset to the first LDATA symbol in this
+			sstAlignSym section which belongs to the segment
+			specified in the SSEARCH symbol.
+
+
+End of Block
+S_END		0x0006
+
+Closes the scope of  the nearest  preceding Block  Start, Global  Procedure
+Start, Local rocedure Start, With Start, or Thunk Start definition.
+
+        DW      length
+        DW      S_END
+
+Skip Record
+S_SKIP		0x0007
+
+This record reserves symbol space for incremental compilers.  The  compiler
+can reserve a dead space in  the  OMF  for  future  expansions  due  to  an
+incremental build.  This  symbol  and  the  associated  reserved  space  is
+removed by the linker.  This record is not used by Borland tools.
+
+        DW      length
+        DW      S_SKIP
+        *       skip data
+
+	skip data       Unused data.  Use  the length  field that  precedes
+			every symbol record to skip this record.
+
+
+Object File Name
+S_OBJNAME	0x0009
+
+This symbol specifies the name of the object file for this module.
+
+        DW      length
+        DW      S_OBJNAME
+        DD      signature
+        DD      @name
+
+	signature       Signature for the CodeView information contained in
+			this module.
+
+	@name       	Name index of OBJ file.
+
+
+Global Procedure Forwarding Pointer
+S_GPROCREF	0x0020
+
+	DW	length
+	DW	S_GPROCREF
+	DD	offset
+	DD	@type
+	DD	@name
+	DD	reserved
+	DD	coffset
+	DD	segment
+
+	offset		Here, offset is an offset from the start of the
+			NB0x header which points to the S_GPROCxx record.
+			For each S_GPROCxx symbol that is encountered, a
+			corresponding S_GPROCREF symbol will be generated
+			and emitted to the sstGlobalSym section.  Translators
+			do not emit the S_GPROCREF symbol.
+
+        @type           Type of this symbol
+
+        @name           Name index of this symbol
+
+	reserved	0
+
+	coffset		Code offset.  Same as offset field in corresponding
+			xPROCyy symbol.
+
+	segment		Code segment.  Same as segment field in corresponding
+			xPROCyy symbol.
+			
+Note that the ordering of  fields is different  from the S_xPROCyy  records
+for convenience of alignment.  When an EPROC is encountered by the  linker,
+it will create a GPROCREF with  a 0 offset field  (if no GPROC exists  that
+matches the EPROC).  One and only one GPROCREF will be created for the name
+that an EPROC refers to.
+
+Global Data Forwarding Pointer
+S_GDATAREF	0x0020
+
+	DW	length
+	DW	S_GDATAREF
+	DD	offset
+	DD	@type
+	DD	@name
+	DD	reserved
+	DD	doffset
+	DD	segment
+
+	offset		This field should be 0
+
+        @type           Type of this symbol
+
+        @name           Name index of this symbol
+
+	reserved	0
+
+	doffset		Data offset.  Same as offset field in corresponding
+			xDATAyy symbol.
+
+	segment		Data segment.  Same as segment field in corresponding
+			xDATAyy symbol.
+
+External Data
+S_EDATA		0x022
+
+This symbol is used by the translator to describe an external symbol used
+in a particular compilation unit.  If the linker finds no GDATAxx record
+for the public symbol described here, it will create a GDATAREF, and use
+the information in the S_EDATA.  If there is a GDATAREF for the
+public symbol described here, then the linker will merge information from
+this S_EDATA.  S_EDATA symbols never appear in EXE images.  They only
+appear in OBJ files.
+
+	DW	length
+	DW	S_EDATA
+	DD	@type
+	DD	@name
+	DW	externalIndex
+	DD	reserved
+
+
+        @type           Type of this symbol
+
+        @name           Name index of this symbol
+
+	externalIndex	An index into the EXTDEFs for the OBJ file.  If
+			this field is 0, the name of the public symbol is
+			specified in a length preceeded name which follows
+			the reserved field in this symbol.
+
+	reserved	0
+
+External Procedure
+S_EPROC		0x023
+	DW	length
+	DW	S_EPROC
+	DD	@type
+	DD	@name
+	DW	externalIndex
+	DD	reserved
+
+        @type           Type of this symbol
+
+        @name           Name index of this symbol
+
+	externalIndex	An index into the EXTDEFs for the OBJ file.  If
+			this field is 0, the name of the public symbol is
+			specified in a length preceeded name which follows
+			the reserved field in this symbol.
+
+	reserved	0
+
+The external index field  is an index  into the EXTDEFs  for the OBJ  file.
+The linker will use this to obtain the mangled name for the symbol.  If the
+external index is 0,  then there follows a  length preceeded name which  is
+identical to the EXTDEF version of the name.  This is to avoid the need for
+an additional TASM pass through.
+
+In both symbols, the '@name' field refers to the same name as would  appear
+in the GDATA or GPROC records  that  correspond  to  the  external  symbol.
+These are NOT necessarily  the same as the  linker namespace names for  the
+symbols, since GPROC names are  commonly divorced from their base  classes.
+
+These two symbols are used to  permit people to call functions like  printf
+in the debugger.
+
+The linker  will  take  EPROCs  and  EDATAs  and  construct  GPROCREFs  and
+GDATAREFs for them.  The EPROCs and EDATAs will not appear in the EXE debug
+information.
+
+[-----------------------------------------------------------------------]
+[		 Symbols for 16:16 Segmented Architectures		]
+[-----------------------------------------------------------------------]
+
+BP Relative 16:16
+S_BPREL16	0x0100
+
+This symbol specifies symbols  that  are  allocated  on  the  stack  for  a
+procedure.  For C/C++, these  include the actual  parameters to a  function
+and the local nonstatic variables of functions.
+
+        DW      length
+        DW      S_BPREL16
+        DW      offset
+        DD      @type
+        DD      @name
+        DD	reserved
+
+	offset       	Signed offset relative to BP.  If offset is 0, then
+			the symbol was assigned to a register by the
+			optimizer and cannot be evaluated.
+
+        @type           Type of this symbol
+
+        @name           Name index of this symbol
+
+	reserved	0
+
+Local Data 16:16
+S_LDATA16	0x0101
+
+These symbols are used for  data that  is not  exported from  a module,  In
+C/C++, symbols that are declared static are emitted as Local Data  symbols.
+Symbols that are emitted  as Local  Data cannot  be moved  into the  global
+symbol table for the executable file.
+
+        DW      length
+        DW      S_LDATA16
+        DW      offset
+        DW      segment
+        DW      flags
+        DD      @type
+        DD      @name
+        DD	reserved
+
+        offset          Offset portion of the symbol address
+
+        segment         Segment portion of the symbol address
+
+	flags		The flags field has only one flag defined:
+			0x0001	The SYMBOL was qualified with _thread.
+				This means that the compiler generated a
+				reference through the per thread data segment,
+				using the index in fs:[2c] as the index into
+				the per thread area.  Debuggers will have to
+				understand this code in order to properly
+				display symbols so qualified.  This flag
+				only applies to global data.
+
+        @type           Type index of the symbol
+
+        @name           Name index of symbol
+
+	reserved	0
+
+
+Global Data Symbol 16:16
+S_GDATA16	0x0102
+
+This symbol record has the same format as the Local Data 16:16 except  that
+the record type is S_GDATA16.  For C/C++, symbols that are not specifically
+declared static are emitted as Global Data Symbols and can be compacted  by
+into the global symbol table.
+
+Local and Global Procedure Start 16:16
+S_LPROC16	0x0104
+S_GPROC16	0x0105
+
+The  symbol  records  define  local  (file  static)  and  global  procedure
+definitions.  For C/C++, functions that are declared static to a module are
+emitted as Local Procedure  symbols.  Functions  not specifically  declared
+static are emitted as  Global Procedures.  For  each S_GPROC16 emitted,  an
+S_GPROCREF symbol must  be  fabricated  and  emitted  to  the  sstGlobalSym
+section.
+
+        DW      length
+        DW      symbol
+        DD      pParent
+        DD      pEnd
+        DD      pNext
+        DW      proc length
+        DW      debug start
+        DW      debug end
+        DW      offset
+        DW      segment
+	DW	flags
+        DD      @proctype
+        DD      @name
+	DD	reserved
+
+        symbol          S_LPROC16 or S_GPROC16
+
+        pParent         See the section on lexical scope linking
+
+        pEnd            See the section on lexical scope linking
+
+        pNext           See the section on lexical scope linking
+
+        proc length     Length in bytes of this procedure
+
+	debug_start     Offset in bytes from the start of the procedure  to
+			the point where the stack  f rame has been set  up.
+			Frame and register variables can be viewed at  this
+			point.
+
+	debug_end       Offset in bytes from the start of the procedure  to
+			the point where the  procedure is  ready to  return
+			and has calculated its return value, if any.  Frame
+			and register variables can still be viewed.
+
+        offset          Offset portion of the segmented procedure address
+
+        segment         Segment portion of the segmented procedure address
+
+        flags	        Type of return the procedure makes:
+                        0       near
+                        4       far
+
+        @proctype       Type index of the procedure type record
+
+        @name           Name index of procedure.
+
+	reserved	0
+
+Thunk Start 16:16
+S_THUNK16	0x0106
+
+This symbol is used to  specify any  piece of  code that  exists outside  a
+procedure.  It is followed by an END record.
+
+        DW      length
+        DW      S_THUNK16
+        DD      pParent
+        DD      pEnd
+        DD      pNext
+        DW      offset
+        DW      segment
+        DW      thunk length
+        DB      ordinal
+        DD      @name
+        *       variant
+
+        pParent         See the section on lexical scope linking
+
+        pEnd            See the section on lexical scope linking
+
+        pNext           See the section on lexical scope linking
+
+        offset          Offset portion of the segmented procedure address
+
+        segment         Segment portion of the segmented procedure address
+
+        thunk length    Length in bytes of this thunk
+
+        ordinal         Ordinal specifying the type of thunk:
+
+                        0       notype
+                        1       adjustor
+                        2       vcall
+                        3       native alias
+
+        @name           Name index of thunk.
+
+	variant       	Variant field, depending on the value of the  thunk
+			type.  If ordinal  is  notype,  there  will  be  no
+			variant  field.   If  ordianal  is  adjustor,   the
+			variant field  will  be  a  two-byte  signed  value
+			specifying the delta to  be added to this  pointer,
+			followed by the name  of the  target function.   If
+			the ordinal is vcall,  then the variant field  will
+			be a two-byte signed displacement into the  virtual
+			table.   Note  specifically  that  because  of  the
+			variable length name, the data in the variant field
+			will not be in  natural alignment.   If ordinal  is
+			native alias, then the  variant is  the seg:off  of
+			the pcode enry point.
+
+
+Block Start 16:16
+S_BLOCK16	0x0107
+
+This symbol specifies the sart of a block of lexically scoped symbols.  The
+lexical scope is terminated by a matching End symbol.
+
+        DW      length
+        DW      S_BLOCK16
+        DD      pParent
+        DD      pEnd
+        DW      length
+        DW      offset
+        DW      segment
+        DD      @name
+
+        pParent         See the section on lexical scope linking
+
+        pEnd            See the section on lexical scope linking
+
+        block length    Length in bytes of the scope of this block
+
+        offset          Offset portion of the segmented procedure address
+
+        segment         Segment portion of the segmented procedure address
+
+        @name      	Name index of the block
+
+
+With Start 16:16
+S_WITH16	0x0108
+
+This symbol describes the lexical scope of the Pascal with statement
+
+
+        DW      length
+        DW      S_WITH16
+        DD      pParent
+        DD      pEnd
+        DW      length
+        DW      offset
+        DW      segment
+        DW      value
+
+        pParent         See the section on lexical scope linking
+
+        pEnd            See the section on lexical scope linking
+
+        length          Length in bytes of the scope of the with block
+
+        offset          Offset portion of the block start address
+
+        segment         Segment portion of the block start address
+
+	value       	Name index of  the value  used in  the Pascal  with
+			statement.
+
+
+Code Label 16:16
+S_LABEL16	0x0109
+
+        DW      length
+        DW      S_LABEL16
+        DW      offset
+        DW      segment
+        DB      NEAR/FAR
+        DD      @name
+
+        offset          Offset portion of the code label address
+
+        segment         Segment portion of the code label address
+
+        NEAR/FAR        Address mode of label:
+                        0       near
+                        4       far
+
+        @name           Name index of code label
+
+
+Change Execution Model 16:16
+S_CEXMODEL16	0x010a
+
+This record is used to notify  the debugger that, following the given  code
+offset and until next such record,  the execution model is of a  particular
+type.  For backwards compatibility, the  native  execution  model  will  be
+assumed in the absence of Change Execution Model records.
+
+        DW      length
+        DW      S_CEXMODEL16
+        DW      offset
+        DW      segment
+        DW      model
+        *       variant
+
+        offset          Offset portion of start of the block
+
+        segment         Segment portion of  start of block
+
+        model           The execution model:
+                        0               Not an executable code (e.g., a table)
+                        0x01-0x1f       Reserved for specific noncode types
+                        0x20            Native model (no processor specified)
+                        0x21-0x3F       Reserved for processor-specific
+					native models.
+			0x40            Pcode
+
+	variant       	Variable data  dependent upon  the execution  model
+			field.  If the variant  record contains segment  or
+			offset information, then  the linker and debugger
+			must be modified to process the segment information.
+
+        DW      Fcn Header
+        DW      SPI
+
+        Fcn Header      Offset of the Pcode procedure's Function Header
+
+	SPI       	Offset of the Pcode  segment's SPI record  (Segment
+			Pcode Information).
+
+        Both addresses are in the specified code segment.
+
+
+Virtual Function Table Pat 16:16
+S_VFTPATH16	0x010b
+
+This record is used to  describe  the  base  class  path  for  the  virtual
+function table descriptor.
+
+        DW      length
+        DW      S_VFTPATH16
+        DW      offset
+        DW      segment
+        DD      @root
+        DD      @path
+
+        offset          Offset portion of start of the virtual function table
+
+        segment         Segment portion of the virtual function table
+
+        @root           The type index of the class at the root of the path
+
+	@path           Type index of the record describing the base class
+			path from the  root  to  the  leaf  class  for  the
+			virtual function table.
+			
+			
+Application Entry Point
+S_ENTRY16	0x110
+
+	DW      6       ; symbol length
+	DW      0x0110  ; S_ENTRY16
+	DD      &entry  ; 16:16 address of entry point
+
+	This symbol is emitted by hand in Borland's startup code.  The &entry
+	field is fixed up  to be the far  pointer to the application's  entry
+	point  (e.g.   _main,  WinMain).   This   symbol  is  moved  to   the
+	sstGlobalSym section, and must be the first symbol to appear in  that
+	section.  It is OK for no S_ENTRYxx symbol to be present.
+	
+
+Variable Live Range Support
+S_OPTVAR16	0x0111
+
+S_REGISTER and S_BPRELxx records my be followed by an S_OPTVARxx record.
+
+	DW	4 + 6*n	; symbol-length
+	DW	0x0111	; S_OPTVAR16
+	DW	n	; number-of-ranges-that-follow
+
+	[start repeat 'n' times]
+
+	DW	start	; start offset
+	DW	length	; length
+	DW	reg#	; register number (same as in S_REGISTER)
+
+	[end   repeat 'n' times]
+	
+
+Procedure Return/Epilogue Indicator
+S_PROCRET16	0x0112
+
+This symbol may occur in multiple  places within a single procedure  scope.
+They must always fall within some procedure scope, and therefore are always
+left in sstAlignSym by the linker/packer.
+
+	DW	6	; symbol length
+	DW	0x0112	; S_PROCRET16
+	DW	addr	; offset of epilogue start within fn
+	DW	length	; length of epilogue
+
+
+[-----------------------------------------------------------------------]
+[		 Symbols for 16:32 Segmented Architectures		]
+[-----------------------------------------------------------------------]
+
+BP Relative 16:32
+S_BPREL32	0x0200
+
+This symbol is used to specify symbols that are allocated on the stack  for
+a procedure.  For C/C++, these include the actual parameters to a  function
+and the local nonstatic variables of functions.
+
+        DW      length
+        DW      S_BPREL32
+        DD      offset
+        DD      @type
+        DD      @name
+
+        offset          Signed offset relative to BP
+
+        @type           Type of this symbol
+
+        @name           Name index of the symbol
+
+
+Local Data 16:32
+S_LDATA32	0x0201
+
+These symbols are used  for data that  is not exported  from a module.   In
+C/C++, symbols that are declared static are emitted as Local Data  symbols.
+Symbols that are emitted  as Local  Data cannot  be moved  into the  global
+symbol table for the executable file.
+
+        DW      length
+        DW      S_LDATA32
+        DD      offset
+        DW      segment
+        DD      @type
+        DD      @name
+
+	offset       	Offset portion of the  symbol address.  Iff  offset
+			is 0, then the symbol was assigned to a register by
+			the optimizer and cannot be evaluated.
+
+        segment         Segment portion of the symbol address
+
+        @type           Type index of the symbol
+
+        @name           Name index of symbol
+
+
+Global Data Symbol 16:32
+S_GDATA32	0x0202
+
+This symbol record has the same format as the Local Data 16:32 except  that
+the symbol type is S_GDATA32.  For C/C++, symbols that are not specifically
+declared static are emitted as Global Data Symbols and can be compacted  by
+the global symbol table.
+
+
+Public 16:32
+S_PUB32		0x0203
+
+This symbol has the same format as the Local Data 16:32 symbol.  Its use is
+reserved to symbols in the Publics table in the Symbol and Type OMF portion
+of the executable file.
+
+
+Global and Local Procedure Start 16:32
+S_LPROC32	0x0204
+S_GPROC32	0x0205
+
+The  symbol  records  define  local  (file  static)  and  global  procedure
+definition.  For C/C++, functions that are declared static to a module  are
+emitted as Local Procedure  symbols.  Functions  not specifically  declared
+static are emitted as  Global Procedures.  For  each S_GPROC32 emitted,  an
+S_GPROCREF symbol must  be  fabricated  and  emitted  to  the  sstGlobalSym
+section.
+
+        DW      length
+        DW      symbol
+        DD      pParent
+        DD      pEnd
+        DD      pNext
+        DD      proc length
+        DD      debug start
+        DD      debug end
+        DD      offset
+        DW      segment
+        DD      @proctype
+        DB      NEAR/FAR
+        DD      @name
+
+        symbol          S_LPROC32 or S_GPROC32
+
+        pParent         See the section on lexical scope linking
+
+        pEnd            See the section on lexical scope linking
+
+        pNext           See the section on lexical scope linking
+
+	offset       	Offset portion of  the  segmented  address  of  the
+			start of the procedure in the code segment
+
+	segment       	Segment portion of the  segmented  address  of  the
+			start of the procedure in the code segment
+
+        @proctype       Type of the procedure type record
+
+        proc length     Length in bytes of this procedure
+
+	debug_start     Offset in bytes from the start of the procedure  to
+			the point where the stack frame has been set up.
+
+ 	debug_end       Offset in bytes from the start of the procedure  to
+			the point where the  procedure is  ready to  return
+			and has calculated its return value, if any.  Frame
+			and register variables an still be viewed.
+
+        NEAR/END        Type of return the procedure makes:
+                        0       near
+                        4       far
+
+        @name           Name index of procedure
+
+
+Thunk Start 16:32
+S_THUNK32	0x0206
+
+This record specifies any piece  of code that  exists outside a  procedure.
+It is followed by an End record.
+
+        DW      length
+        DW      S_THUNK32
+        DD      pParent
+        DD      pEnd
+        DD      pNext
+        DD      offset
+        DW      segment
+        DW      thunk length
+        DB      ordinal
+        DD      @name
+        *       variant
+
+        pParent         See the section on lexical scope linking
+
+        pEnd            See the section on lexical scope linking
+
+        pNext           See the section on lexical scope linking
+
+	offset       	Offset portion of  the  segmented  address  of  the
+			start of the thunk in the code segment
+
+	segment       	Segment portion of the  segmented  address  of  the
+			start of the thunk in the code segment
+
+        thunk length    Length in bytes of this thunk
+
+        ordinal         Ordinal specifying the type of thunk
+                        0       notype
+                        1       adjustor
+                        2       vcall
+                        3       native alias
+
+        @name           Name index of thunk
+
+	variant       	Variant field, depending on value of thunk ordinal.
+			If ordinal is notype,  there  will  be  no  variant
+			field.  If ordinal is  adjustor, the variant  field
+			will be  a two-  byte signed  value specifying  the
+			delta to be added to the this pointer, followed  by
+			the name of the target function.  If the ordinal is
+			vcall, then the variant  field will  be a  two-byte
+			signed displacement into  the  virtual  table.   If
+			ordinal is native alias,  then the  variant is  the
+			seg:offset of the pcode entry point.
+
+
+Block Start 16:32
+S_BLOCK32	0x0207
+
+This symbol specifies the start  of a  block of  lexically scoped  symbols.
+The lexical scope is terminated by a matching End symbol.
+
+        DW      length
+        DW      S_BLOCK32
+        DD      pParent
+        DD      pEnd
+        DD      length
+        DD      offset
+        DW      segment
+        DD      @name
+
+        pParent         See the section on lexical scope linking
+
+        pEnd            See the section on lexical scope linking
+
+        block length    Length in bytes of the scope of this block
+
+        offset          Offset portion of the segmented address of
+                        the start of the block
+
+	segment         Segment portion of the  segmented  address  of  the
+			start of the block
+
+        @name      	Name index of the block
+
+
+With Start 16:32
+S_WITH32	0x0208
+
+        DW      length
+        DW      S_WITH32
+        DD      pParent
+        DD      pEnd
+        DW      with length
+        DD      offset
+        DW      segment
+        DW      value
+
+        pParent         See the section on lexical scope linking
+
+        pEnd            See the section on lexical scope linking
+
+        length          Length in bytes of the scope of the with block
+
+	offset       	Offset portion of  the  segmented  address  of  the
+			start of the block
+
+	segment       	Segment portion of the  segmented  address  of  the
+			start of the block
+
+	value       	Name index of the value used in the with statement.
+
+
+Code Label 16:32
+S_LABEL32	0x0209
+
+        DW      length
+        DW      S_LABEL32
+        DD      offset
+        DW      segment
+        DB      NEAR/FAR
+        DD      @name
+
+	offset       	Offset portion of  the  segmented  address  of  the
+			start of the block
+
+	segment       	Segment portion of the  segmented  address  of  the
+			start of the block
+
+        NEAR/FAR        Address mode of label:
+                        0       near
+                        4       far
+
+        @name           Name index of label
+
+
+Change Execution Model 16:32
+S_CEXMODEL32	0x020a
+
+The format of this symbol has  not been defined for 16:32 addressing.   The
+symbol is defined as a placeholder.
+
+
+Virtual Function Table Path 16:32
+S_VFTPATH32	0x020b
+
+This record is used to  describe  the  base  class  path  for  the  virtual
+function table descriptor.
+
+        DW      length
+        DW      S_VFTPATH32
+        DD      offset
+        DW      segment
+        DD      @root
+        DD      @path
+
+        offset          Offset portion of start of the virtual function table
+
+        segment         Segment portion of the virtual function table
+
+	@root       	The type of index of the  class at the root of  the
+			path
+
+	@path       	Type index of the record describing the base  class
+			path from the  root  to  the  leaf  class  for  the
+			virtual function table.
+
+
+Application Entry Point
+S_ENTRY32	0x210
+
+	DW      8       ; symbol length
+	DW      0x0210  ; S_ENTRY32
+	DP      &entry  ; 16:32 address of entry point
+
+	This symbol is emitted by hand in Borland's startup code.  The &entry
+	field is fixed up  to be the far  pointer to the application's  entry
+	point  (e.g.   _main,  WinMain).   This   symbol  is  moved  to   the
+	sstGlobalSym section, and must be the first symbol to appear in  that
+	section.  It is OK for no S_ENTRYxx symbol to be present.
+
+
+Variable Live Range Support
+S_OPTVAR32	0x0211
+
+S_REGISTER and S_BPRELxx records my be followed by an S_OPTVARxx record.
+
+	DW	4 + 10*n; symbol-length
+	DW	0x0211	; S_OPTVAR32
+	DW	n	; number-of-ranges-that-follow
+
+	[start repeat 'n' times]
+
+	DD	start	; start offset
+	DD	length	; length
+	DW	reg#	; register number (same as in S_REGISTER)
+
+	[end   repeat 'n' times]
+	
+	
+Procedure Return/Epilogue Indicator
+S_PROCRET32	0x0212
+
+This symbol may occur in multiple  places within a single procedure  scope.
+They must always fall within some procedure scope, and therefore are always
+left in sstAlignSym by the linker/packer.
+
+	DW	8	; symbol length
+	DW	0x0212	; S_PROCRET32
+	DD	addr	; offset of epilogue start within fn
+	DD	length	; length of epilogue
+
+
+[-----------------------------------------------------------------------]
+[		    Types Definition Segment ($$BTYPES)			]
+[-----------------------------------------------------------------------]
+
+A $$BTYPES segment may appear in linkable modules.  It provides descriptions
+of the types of  the symbols  found in  the $$PUBLICS  and $$SYBMOLS  debug
+section for the module.
+
+Type Record
+
+A type record has the format:
+
+        DW      length
+        *       type string
+
+	length       	The length in bytes  of the following type  string.
+			This count does not include the length field.
+
+
+Type String
+
+A type string is a series of consecutive leaf structures.
+
+        DW      leaf
+        *       data
+        DW      leaf
+        *       data ...
+
+        leaf            LF_...index, as described below
+
+        data            Data specified to each leaf type
+
+No leaf index can have a value  of 0x0000.  The leaf indices are  separated
+into four ranges according to the use of the type record.  The first  range
+is for the type records that  are  directly  referenced  in  symbols.   The
+second range is  for type records  that are not  referenced by symbols  but
+instead are referenced by other type records.  All type records must have a
+starting leaf index in these first two ranges.
+
+The third range of leaf indices is  used to build up complex lists such  as
+the field list of class type record.  No type record can begin with one  of
+the leaf indices in this range.
+
+The fourth ranges of type indices are  used to represent numeric data in  a
+symbol or type records.  These  leaf indices are  greater than 0x8000.   At
+the point that the type or  symbol processor is expecting a numeric  field,
+the next two bytes in the type  record are examined.  If the value is  less
+than 0x8000, then the two bytes contain the numeric value.  If the value is
+greater than  0x8000, then  the data  follows the  leaf index  in a  format
+specified by the leaf index.  See  the detailed description of the  numeric
+leaf indices.
+
+Because of the method used to maintain natural alignment in complex  lists,
+no leaf index can have a value  greater than or equal to 0xf000.  Also,  no
+leaf index can have a value such  that the least significant 8 bits of  the
+value is greater than or equal to 0xf0.
+
+Leaf indices for type records that can be referenced from symbols:
+
+        0x0001          LF_MODIFIER
+        0x0002          LF_POINTER
+        0x0003          LF_ARRAY
+        0x0004          LF_CLASS
+        0x0005          LF_STRUCTURE
+        0x0006          LF_UNION
+        0x0007          LF_ENUM
+        0x0008          LF_PROCEDURE
+        0x0009          LF_MFUNCTION
+        0x000a          LF_VTSHAPE
+        0x000b          LF_COBOL0
+        0x000c          LF_COBOL1
+        0x000d          LF_BARRAY
+        0x000e          LF_LABEL
+        0x000f          LF_NULL
+        0x0010          LF_NOTTRAN
+        0x0011          LF_DIMARRAY
+        0x0012          LF_VFTPATH
+
+
+Leaf indices for type records that can be referenced from other type records.
+
+        0x0200          LF_SKIP
+        0x0201          LF_ARGLIST
+        0x0202          LF_DEFARG
+        0x0203          LF_LIST
+        0x0204          LF_FIELDLIST
+        0x0205          LF_DERIVED
+        0x0206          LF_BITFIELD
+        0x0207          LF_METHODLIST
+        0x0208          LF_DIMCONU
+        0x0209          LF_DIMCONLU
+        0x020a          LF_DIMVARU
+        0x020b          LF_DIMVARLU
+        0x020c          LF_REFSYM
+
+Leaf indices for fields of complex lists:
+
+        0x0400          LF_BCLASS
+        0x0401          LF_VBCLASS
+        0x0402          LF_IVBCLASS
+        0x0403          LF_ENUMERATE
+        0x0404          LF_FRIENDFCN
+        0x0405          LF_INDEX
+        0x0406          LF_MEMBER
+        0x0407          LF_STMEMBER
+        0x0408          LF_METHOD
+        0x0409          LF_NESTTYPE
+        0x040a          LF_VFUNCTAB
+        0x040b          LF_FRIENDCLS
+
+
+Leaf indices for numeric fields of symbols and type records:
+
+        0x8000          LF_NUMERIC
+        0x8000          LF_CHAR
+        0x8001          LF_SHORT
+        0x8002          LF_USHORT
+        0x8003          LF_LONG
+        0x8004          LF_ULONG
+        0x8005          LF_REAL32
+        0x8006          LF_REAL64
+        0x8007          LF_REAL80
+        0x8008          LF_REAL128
+        0x8009          LF_QUADWORD
+        0x800a          LF_UQUADWORD
+        0x800b          LF_REAL48
+
+        0xf0            LF_PAD0
+        0xf1            LF_PAD1
+        0xf2            LF_PAD2
+        0xf3            LF_PAD3
+        0xf4            LF_PAD4
+        0xf5            LF_PAD5
+        0xf6            LF_PAD6
+        0xf7            LF_PAD7
+        0xf8            LF_PAD8
+        0xf9            LF_PAD9
+        0xfa            LF_PAD10
+        0xfb            LF_PAD11
+        0xfc            LF_PAD12
+        0xfd            LF_PAD13
+        0xfe            LF_PAD14
+        0xff            LF_PAD15
+
+
+Member attribute field
+
+Several of the type records  below reference a  field attribute bit  field.
+This has the following format:
+
+        access:         :2      Specifies the access protection of the item
+                         0      No access protection
+                         1      Private
+                         2      Protected
+                         3      Public
+
+        mprop           :3      Specifies the properties for methods
+                         0      Vanilla method
+                         1      Virtual method
+                         2      Static method
+                         3      Friend method
+                         4      Introducing virtual method
+                         5      Pure virtual method
+                         6      Pure introducing virtual method
+                         7      Reserved
+
+        pseudo          :1      True if the method is never instantiated by
+				the compiler
+	noninherit	:1      True if the class cannot be inherited
+        noconstruct     :1      True if the class cannot be constructed
+        ovlop   	:1      True if this is an overloaded operator
+        cnvop   	:1      True if this is a type conversion operator
+        isctor  	:1      True if this is a constructor
+        isdtor  	:1      True if this is a  destructor
+        bltin   	:1      True if this is a compiler-created method
+	isbitfield	:1	True is this is a bitfield member
+	reserved        :2
+
+
+Leaf Indices that can be Referenced from Symbols
+
+Type Modifier
+LF_MODIFIER	0x0001
+
+This record is used to  indicate the const  and/or volatile properties  for
+any particular type.
+
+        DW      LF_MODIFIER
+        DW      attribute
+        DD      @index
+
+        attribute
+	const   	:1      const attribute.
+        volatile        :1      volatile attribute.
+        reserved        :14
+
+        @index          type index of the modified type
+
+Pointer
+LF_POINTER	0x0002
+
+This record is the generic  pointer  type  record.   It  supports  the  C++
+referenct type, pointer to data  member, and  pointer to  method.  It  also
+conveys the const and volatile pointer types.
+
+        DW      LF_POINTER
+        DW      attribute
+        DW      @type
+        *       variant
+
+        attribute       Consists of five bit fields:
+        ptrtype 	:5      Ordinal specifying size of pointer
+                         0      Near
+                         1      Far
+                         2      Huge
+                         3      Based on segment
+                         4      Based on value
+                         5      Based on segment of value
+                         6      Based on address of symbol
+                         7      Based on segment of symbol address
+                         8      Based on type
+                         9      Based on self
+                         10     Near 32 bit pointer
+                         11     Far 32 bit pointer
+                         12-31  Reserved
+			
+        ptrmode         :3      Ordinal specifying pointer mode
+                         0      Pointer
+                         1      Reference
+                         2      Pointer to data member
+                         3      Pointer to method
+                         4-7    Reserved
+			
+        isflat32 	:1      True if 16:32 pointer
+        volatile 	:1      Volatile pointer attribute
+        const    	:1      Const pointer attribute
+        unused 		:5      Unused and reserved
+
+@type           Type index of object pointed to
+
+	variant         	variant position of the record, depending
+				upon the pointer type
+				
+	based on segment	Segment value
+        based on type           Index of type followed by length-prefixed name
+        based on self           Nothing
+        based on symbol         Copy of symbol record including length field
+        pointer to data member  Union specifying pointer to data member
+        pointer to method       Union specifying pointer to method
+
+
+The union specifying the pointer to data member has the format:
+
+        DW      format
+        DW      @class
+
+        format          0       16:16 data for classs with no virtual
+				functions or virtual bases.
+                        1       16:16 data for classs with virtual functions.
+                        2       16:16 data for class with virtual bases.
+                        3       16:32 data for classes with or without
+				virtual functions and no virtual bases.
+                        4       16:32 data for class with virtual bases.
+                        5       16:16 near method nonvirtual bases with
+				single address point.
+                        6       16:16 near method nonvirtual bases with
+				multiple address points.
+			7       16:16 near method with virtual bases.
+                        8       16:16 far method nonvirtual bases with
+				single address point.
+                        9       16:16 far method nonvirtual bases with
+				multiple address points.
+			10      16:16 far method  with virtual bases.
+                        11      16:32 method nonvirtual bases with single
+				address point.
+                        12      16:32 method nonvirtual bases with multiple
+				address points.
+			13      16:16 method  with virtual bases.
+			32	single inheritance only
+			33	multiple inheritance, no virtual bases
+			34	multiple inheritance with virtual bases
+
+
+The pointer to data member and pointer to method have the following formats
+in memory.  In the  following descriptions of the  format and value of  the
+NULL pointer, * means any value.
+
+*       16:16 pointer to data member for a class with no virtual functions
+	or bases.
+
+        DW      mdisp
+        mdisp           Displacement to data.  NULL is 0xffff
+
+*       16:16 pointer to data member for a class with virtual functions.
+
+        DW      mdisp
+        mdisp           Displacement to data.  NULL is 0
+
+*       16:16 pointer to data member for a class with virtual functions.
+
+        DW      mdisp
+        DW      pdisp
+        DW      vdisp
+
+        mdisp           displacement to data.
+
+        pdisp           this pointer displacement to virtual base table
+			pointer.
+
+        vdisp           displacement within virtual base table.  NULL
+			value is (,,0xffff)
+			
+*       16:32 near pointer to data member for a class with and without
+			virtual functions and no virtual bases.
+
+        DD      mdisp
+
+        mdisp           Displacement to data.  NULL is 0x80000000
+
+
+*       16:32 near pointer to data member for a class with virtual bases.
+
+        DD      mdisp
+        DD      pdisp
+        DD      vdisp
+
+        mdisp           displacement to data
+
+        pdisp           this pointer displacement to virtual base table
+			pointer
+
+        vdisp           displacement within virtual base table.  NULL
+			value is (,,0xffffffff)
+
+*       16:16 pointer to near member function for a class with no virtual
+			functions or bases and a single address point.
+
+        DW      off
+
+        off     near address of method.  NULL is 0
+
+*       16:32 pointer to near member function for a class with no virtual
+			bases with multiple address points.
+
+        DW      off
+        DW      disp
+
+        off     offset of function
+        disp    displacement of address point.  NULL is (0,*)
+
+*       16:16 pointer to near membr function for a class with virtual bases
+
+        DW      off
+        DW      mdisp
+        DW      pdisp
+        DW      vdisp
+
+        off             offset of function
+
+        mdisp           displacement to data
+
+        pdisp           this pointer displacement to virtual base table
+			pointer
+
+        vdisp           displacement within virtual base table.  NULL
+			value is (0,*,*,*)
+
+*       16:16 pointer to far member function for a class with no virtual
+			bases and a single address point
+
+        DW      off
+        DW      disp
+
+        off             offset function
+        disp            displacement of address point.  NULL is (0:0)
+
+
+*       16:16 pointer to far member function for a class with no virtual
+			bases and multiple address points
+
+        DW      off
+        DW      seg
+        DW      disp
+
+        off             offset of function
+        seg             segment of function
+        disp            displacement of address point.  NULL is (0:0,*)
+
+
+*       16:16 pointer to far member function for a class with virtual bases
+
+        DW      off
+        DW      seg
+        DW      mdisp
+        DW      pdisp
+        DW      vdisp
+
+        off             offset of function
+
+        seg             segment of function
+
+        mdisp           displacement to data
+
+        pdisp           this pointer displacement to virtual base table
+			pointer
+
+        vdisp           displacement within virtual base table.  NULL
+			value is (0,*,*,*)
+
+*       16:32 pointer to member function for a class with no virtual bases
+			and a single address point
+
+        DD      off
+
+        off             offset of function.  NULL is 0L
+
+*       16:32 pointer to member function for a class with no virtual bases
+			and multiple address points
+
+        DD      off
+        DD      seg
+
+        off             offset of function
+
+        seg             displacement of address point.  NULL is (0L:0L)
+
+
+*       16:32 pointer to member function for a class with virtual bases
+
+        DD      off
+        DD      mdisp
+        DD      pdisp
+        DD      vdisp
+
+        off             offset of function
+
+        mdisp           displacement to data
+
+        pdisp           this pointer displacement to virtual base table
+			pointer
+
+        vdisp           displacement within virtual base table.  NULL
+			value is (0L,*,*,*)
+
+
+Simple Array
+LF_ARRAY	0x0003
+
+        DW      LF_ARRAY
+        DD      @elemtype
+        DD      @idxtype
+        DD      @name
+        *       length
+	*	nElts
+
+        @elemtype               Type index of each array element
+
+        @idxtype                Type index of indexing variable
+
+        @name                   Name index of array
+
+        length                  Numeric field giving length of array in
+				bytes
+
+	nElts			Numeric leaf giving number of elts in
+				array
+
+
+Classes and Structures
+LF_CLASS	0x0004
+LF_STRUCTURE	0x0005
+
+The format for structures and classes is as follows:
+
+        DW      leaf
+        DW      count
+        DD      @field
+        DW      property
+	DD	@cclass
+        DD      @dList
+        DD      @vshape
+        DD      @name
+        *       length
+
+        leaf            LF_CLASS or LF_STRUCTURE
+
+	count       	Number of elements in the class or structure.  This
+			count  includes  direct,   virtual,  and   indirect
+			virtual bases,  and  methods  including  overloads,
+			data members, static data members, friends, and  so
+			on.
+
+        @field          Type index of the field list for this class
+
+        property        Property bit field
+	  ctor    	:1      Class has a constructor
+			:1      Class has overloaded operators
+          isnested      :1      Class is a nested class
+          cnested 	:1      Class contains nested classes
+          opassign      :1      Class has overloaded assignment
+          opcast  	:1      Class has casting methods
+          fwdref  	:1      Class/structure is a forward (incomplete)
+				reference
+	  dtor		:1	Class has a destructor
+	  reserved      :7
+
+	@cclass       	If cclass is non-zero, then the enum is a nested
+			enum, and the value is the type index of the class
+			that contains the enum Note that in the 'GlobalSym'
+			table, nested types show up as S_UDT records with
+			names like 'outer::inner'.
+
+	@dList       	Type index of the derivation list.  This is  output
+			by the compiler as 0x0000  and is filled in by  the
+			linker  to a  LF_DERIVED record  containing
+			the type indices of those classes which immediately
+			inherit the current class.  A zero index  indicates
+			that no derivation  information  is  available.   A
+			null list indicates that the class is not inherited
+			by other classes.
+
+        @vshape Type index of the virtual function table shape descriptor
+
+        @name           Name index of this type
+
+        length          Numeric leaf specifying size in bytes of the structure
+
+
+Unions
+LF_UNION	0x0006
+
+The format for a Union is as follows:
+
+        DW      LF_UNION
+        DW      count
+        DD      @field
+        DW      property
+	DD	@cclass
+        DD      @name
+        *       length
+
+        count           Number of fields in the union
+
+        @field          Type index of field list.  See LF_CLASSS/LF_STRUCTURE
+
+        property        Property bit field.  See LF_CLASSS/LF_STRUCTURE
+
+	@cclass       	If cclass is non-zero, then the enum is a nested
+			enum, and the value is the type index of the class
+			that contains the enum Note that in the 'GlobalSym'
+			table, nested types show up as S_UDT records with
+			names like 'outer::inner'.
+
+        @name           Name index of union
+
+        length          Numeric leaf specifying size in bytes of the union
+
+
+Enumeration
+LF_ENUM		0x0007
+
+The format for an Enum is as follows:
+
+        DW      LF_ENUM
+        DW      count
+        DD      @type
+        DD      @fList
+        DD      @cclass
+        DD      @name
+
+        count           Number of enumerates
+
+        @type           Underlying type of enum
+
+        @field          Type index of field list.  See LF_CLASS/LF_STRUCTURE
+
+	@cclass       	If cclass is  non-zero, then the  enum is a  nested
+			enum, and the value is the type index of the  class
+			that contains the enum
+
+        @name           Name index of enum
+
+
+Procedure
+LF_PROCEDURE	0x0008
+
+        DW      LF_PROCEDURE
+        DD      @rvtype
+        DB      call
+        DB      reserved
+        DW      #parms
+        DD      @arglist
+
+        @rvtype         Type index of the value returned by the procedure
+
+        call            Calling convention of the procedure
+                        0       Near C (arguments pushed right to left,
+				caller  pops arguments), short
+			1       Far C
+			2       Near pascal (arguments pushed left to
+				right,  callee pops arguments)
+			3       Far pascal
+			4       Near fastcall
+                        5       Far fastcall
+                        6       Reserved
+                        7       Near stdcall
+                        8       Far stdcall
+                        9       Near syscall
+                        10      Far syscall
+                        11      This call
+                        12-255  Reserved
+
+	The value 0x80 can be  combined  with  any  of  the  other  calling
+	convention values to specify 'fastthis' (methods only)
+
+        #parms          Number of parameters
+
+        @arglist        Type index of argument list type record
+
+
+Member Function
+LF_MFUNCTION	0x0009
+
+        DW      LF_MFUNCTION
+        DD      @rvtype
+        DD      @class
+        DD      @this
+        DB      call
+        DB      res
+        DW      parms
+        DD      @arglist
+        DD      thisadjust
+
+        @rvtype         Type index of the value returned by the procedure
+
+        @class          Type index of the containing class of the function
+
+	@this       	Type index of the  this  parameter  of  the  member
+			function.  A type of void indicates that the member
+			function is static and has no this parameter.
+
+
+
+
+	call       	Calling convention of the procedure.  See Procedure
+			description.
+
+	#parms       	Number of parameters.  This count does not  include
+			the this parameter.
+
+	@arglist       	List of parameter specifiers.   This list does  not
+			include the this parameter.
+
+	thisadjust      Logical this adjustor for  the method.  Whenever  a
+			class element is referenced  via the this  pointer,
+			thisadjust will be  added to  the resultant  offset
+			before referencing the element.
+
+
+Virtual Function Table Shape
+LF_VTSHAPE	0x000a
+
+This record describes the format of a virtual function table.  This  record
+is accessed via vfunctabptr in the member list of a class which  introduces
+the virtual function.  The member of the class at the address point of  the
+introducing class has a type  of  LF_POINTER  and  points  to  the  virtual
+function table.  The underlying type of  the  pointer  is  a  VTShape  type
+record.  This record describes how to interpret the memory at the  location
+pointed to by the virtual function table pointer.
+
+        DW              LF_VTSHAPE
+        DW              count
+        (DD ((4 bits) * count))       descriptor
+
+        count           Number of descriptors
+
+        descriptor      A four-bit ordinal describing the entry in the
+			virtual table
+	0       	Near
+        1       	Far
+        2       	Thin
+        3       	Address point displacement to outermost class.
+			This is at entry [-1] from tables address.
+        4       	Far pointer to metaclass descriptor.
+			This is at entry [-2] from table address.
+        5       	Near32
+        6       	Far32
+        7-15    	Reserved
+
+Label
+LF_LABEL	0x000e
+
+This is used  for assembler  labels where  there is  no typing  information
+about the label.
+
+        DW      LF_LABEL
+        DW      mode
+
+        mode            Addressing mode of the lable
+                        0       Near label
+                        4       Far label
+
+
+Null
+LF_NULL		0x000f
+
+This is used where the symbol requires  a type record but the data  content
+is null.
+
+        DW      LF_NULL
+
+
+Not Translated
+LF_NOTTRANS	0x0010
+
+This is used when the linker encounters a type record that has no
+equivalent in the Borland 32 bit symbol format.
+
+        DW      LF_NOTTRANS
+
+
+Multiply Dimensioned Array
+LF_DIMARRAY	0x0011
+
+This record is used to describe a multiply dimensioned array.
+
+        DW      LF_DIMARRAY
+        DW      @utype
+        DW      @diminfo
+        DW      name
+
+        @utype          Underlying type of the array
+
+	@diminfo       	Index of the type  record containing the  dimension
+			information
+
+        name            Name index of the array
+
+
+Path to Virtual Function Table
+LF_VFTPATH	0x0012
+
+This record is used to describe the path to the virtual function table.
+
+        DW              LF_VFTPATH
+        DW              count
+        DW * count      bases
+
+	count       	Count of number of bases in the path to the virtual
+			function table
+
+        bases           Type indices of the base classes in the path
+
+
+Type Records Referenced from Type Records
+
+Skip
+LF_SKIP		0x0200
+
+This is used by incremental compilers to reserve space for future indexes.
+
+        DW      LF_SKIP
+        DW      index
+        *       pad
+
+	index       	In  processing  $$BTYPES,   the  index  counter   is
+			advanced to index count, skipping all  intermediate
+			indices.  This is the next valid index.
+
+	pad       	Space reserved for incremental compilations.   Note
+			that  this  record  is  removed  by  the  link/pack
+			utility so there is no requirement for  maintaining
+			natural alignment for this record.
+
+
+Argument List
+LF_ARGLIST	0x0201
+
+        DW      LF_ARGLIST
+        DW      argcount
+        *       indices
+
+        argcount        Count of number of indices in list
+
+	indices       	List of type  indices  for  describing  the  formal
+			parameters to a function or method.
+
+
+Default Argument
+LF_DEFARG	0x0202
+
+        DW      LF_DEFARG
+        DD      @index
+        DD	@name
+
+        @type           Type index of resulting expression
+        @name           Name index of expression
+
+
+Arbitrary List
+LF_LIST		0x0203
+
+        DW      LF_LIST
+        *       data
+
+	data       	A list of leaves with a format defined by the  leaf
+			which indexes the list.   This leaf  type has  been
+			superseded by more specific list types.
+
+
+Derived Classes
+LF_DERIVED	0x0205
+
+This type record specifies all  of the  classes that  are directly  derived
+from the class that references this type record.
+
+        DW      LF_DERIVED
+        DW      count
+
+        count           Number of types in the list
+
+	@type       	Type indices of the  classes that directly  inherit
+			from the class that references this class
+
+
+Field List
+LF_FIELDLIST	0x0204
+
+A field list contains the descriptors of the fields of a structure,  class,
+union, or enumeration.   The  field  list  is  composed  of  zero  or  more
+subfields.  Because of the requirement for natural alignment, there may  be
+padding between elements of  the field list.  As  a program walks down  the
+field list, the address  of the next subfield  is calculated by adding  the
+length of the  previous field to  the address of  the previous field.   The
+byte at the new address is examined and if it is greater than 0xf0, the low
+four bits are extracted and added to the address to find the address of the
+next subfield.  These padding fields are not included in the count field of
+the class, structure, union, or enumeratin type records.  If the field list
+is broken into two or more pieces  by the compiler, then the last field  of
+each piece is a LF_INDEX with the type being the index of the continuation.
+The LF_INDEX and LF_PADx fields of the field list are not included in field
+list count specified in the class, structure, union, or enumeration record.
+
+        DW      leaf
+        *       data
+        *       pad
+        [repeats]
+
+
+Bitfields
+LF_BITFIELD	0x0206
+
+Bitfields are represented by  an entry  in the  field list  that indexes  a
+bitfield type definition.
+
+        DW      LF_BITFIELD
+        DB      length
+        DB      position
+        DD      @type
+
+        length          The length in bits of the object
+
+        position        Starting position (from bit 0) of the object in the word.
+
+        @type           Type index of the field
+
+
+Method List
+LF_MLIST	0x0207
+
+        DW      LF_MLIST
+        DW      attribute
+        DD      @type
+        DD	reserved
+        [repeat]
+
+        attribute       Attribute of the member function
+
+	@type       	Type  index  of  the  procedure  record  for   this
+			occurrence of the function.
+
+	reserved	0
+
+	vtab offset     Present only when property attribute is introducing
+			virtual (optional).  Offset in vtable of the  class
+			which contains the pointer to the function.
+
+
+
+Once a method has  been  found  in  this  list,  its  symbol  is  found  by
+qualifying the method name with its class (T::name) and then searching  the
+symbol table for a symbol by that  name with the correct type index.   Note
+that the number of repeats is determined  by the subleaf of the field  list
+that references this LF_MLIST record.
+
+Dimensioned Array with Constant Upper Bound
+LF_DIMCONU	0x0208
+
+This record is  used to  describe a  dimensioned array  with default  lower
+bound and constant upper  bound.   The  default  lower  bound  is  language
+specific.
+
+        DW      LF_DIMCONU
+        DW      rank
+        DW      @index
+        s*rank  bound
+
+        rank            Number of dimensions
+
+        @index          Type of the index
+
+	bound       	Constants for the upper bound of each dimension  of
+			the array.  Each constant is of the size s specific
+			by @index.
+
+
+Dimensioned Array with Constant Lower and Upper Bounds
+LF_DIMCONLU	0x0209
+
+This record is used to describe a dimensioned array with constant lower and
+upper bound.
+
+        DW              LF_DIMCONLU
+        DW              rank
+        DW              @index
+        DW*s*rank       bound
+
+        rank            Number of dimensions
+
+        @index          Type of the index
+
+	bound       	Pairs of constants for the lower and upper bound of
+			each dimension of the  array.  Each constant is  of
+			the size s specified  by @index.   The ordering  is
+			lower  bound  followed  by  upper  bound  for  each
+			dimension.
+
+Dimensioned Array with Variable Upper Bound
+LF_DIMVARU	0x020a
+
+This record is  used to  describe a  dimensioned array  with default  lower
+bound and variable upper  bound.   The  default  lower  bound  is  language
+specific.
+
+        DW              LF_DIMVARU
+        DW              rank
+        DW              @index
+        DW*rank @var
+
+        rank            Number of dimensions
+
+        @index          Type of the index
+
+	@var       	Array of type index of LF_REFSYM record  describing
+			the variable upper bound.  If one dimension of  the
+			array is variable,  then  all  dimensions  must  be
+			described using LF_REFSYM records.
+
+Dimensioned Array with Variable Lower and Upper Bounds
+LF_DIMVARLU	0x020b
+
+This record is used to describe a dimensioned array with variable lower and
+upper bound.
+
+        DW              LF_DIMVARLU
+        DW              rank
+        DW              @index
+        DW*rank bound
+
+        rank            Number of dimensions
+
+        @index          Type of index
+
+	@var       	Array  of   type  indices   of  LF_REFSYM   records
+			describing the variable lower and upper bounds.  If
+			one dimensin  of the  array is  variable, then  all
+			dimensions  must  be   described  using   LF_REFSYM
+			records.  The order  is  lower  bound  followed  by
+			upper bound for each dimension.
+
+Referenced Symbol
+LF_REFSYM	0x020c
+
+Don't you dare emit this record.
+
+This record is  used to  describe a  symbol that  is referenced  by a  type
+record.  The record  is  defined  because  type  records  cannot  reference
+symbols  or  locations  in  the  $$BSYMSS  table  because  global   symbol
+compaction will move symbols.
+
+        DW      LF_REFSYM
+        *       sym
+
+	sym       	Copy of the referenced symbol including the  length
+			field.
+
+Subfields of complex lists
+
+Currently, the only complex list  that uses the  following leaf indices  is
+the field list of a structure, class, union, or enumeration.
+
+
+Index To Another Type Record
+LF_INDEX	0x0405
+
+        DW      LF_INDEX
+        DD      @index
+
+	index       	Type index.  This field is emitted by the  compiler
+			when a  complex  list  needs  to  be  split  during
+			writing.
+
+
+Real Base Class
+LF_BCLASS	0x0400
+
+This leaf specifies a real base  class.  If a class inherits base  classes,
+the corresponding BaseClass records will  precede all other member  records
+in the field list of that class.  Base class records are emitted in left to
+right declaration order for real bases.
+
+        DW      LF_BCLASS
+        DD      @type
+        DW      attribute
+        *       offset
+
+	@type       	Index to type record of the class.  The class  name
+			can be obtained from this record.
+
+        attribute       Member attribute bit field
+
+	offset       	Offset of subobject that represents the base  class
+			within the structure.
+
+
+Direct and Indirect Virtual BaseClass
+LF_VBCLASS	0x0401
+LF_IVBCLASS	0x0402
+
+This leaf specifies a directly  inherited virtual base  class.  If a  class
+inherits virtual base classes,  the corresponding Direct Virtual  BaseClass
+records will follow all Base  Class member  records and  precede all  other
+member records in the fList of  that  class.   Direct  Virtual  Base  class
+records are emitted in bottommost left-to-right order for virtual bases.
+
+        DW      type
+        DD      @btype
+        DD      @vbptype (void *)
+        DW      attribute
+        *       vbpoff
+        *       vboff (-1)
+	
+        type            LF_VBCLASS or LF_IVBCLASS
+
+	@btype       	Index to  type record  of the  direct virtual  base
+			class.  The class name  can be  obtained from  this
+			record.
+
+        @vbptype        Type index of the virtual base pointer for this base
+
+        attribute       Member attribute bit field
+
+	vbpoff       	Numeric leaf specifying the  offset of the  virtual
+			base pointer from the  address point  of the  class
+			for this virtual base.
+
+	vboff       	Numeric leaf specifying the index into the  virtual
+			base displacement table of the entry that  contains
+			the  displacement   of  the   virtual  base.    The
+			displacement is relative  to the  address point  of
+			the class plus vbpoff.
+
+
+Friend Class
+LF_FRIENDCLS	0x040b
+
+This leaf specifies a friend class.
+
+        DW      LF_FRIENDCLS
+        DD      @type
+
+	@type       	Index to type record of the friend class.  The name
+			of the class can  be obtained  from the  referenced
+			record.
+
+
+Friend Function
+LF_FRIENDFCN	0x0404
+
+This leaf specifies a friend function.
+
+        DW      LF_FRIENDFCN
+        DD      @type
+        DD      @name
+
+        @type           Index to type record of the friend function
+
+        @name           Name index of friend function
+
+Data Member
+LF_MEMBER	0x0406
+
+This leaf specifies nonstatic data members of a class.
+
+        DW      LF_MEMBER
+        DD      @type
+        DW      attribute
+        DD      @name
+        DD	reserved
+        *       offset
+
+        @type           Index to type record for field
+
+        attribute               Data member bit field
+                        access  :2
+
+        @name           Name index of the member field
+
+	reserved	0
+
+	offset       	Numeric leaf specifying the offset of field in  the
+			structure
+
+
+Static Data Member
+LF_STMEMBER	0x0407
+
+This leaf specifies static data member of a class.
+
+        DW      LF_STMEMBER
+        DD      @type
+        DW      attribute
+        DD      @name
+        DD	reserved
+
+        @type           Index to type record for field
+
+        attribute       Member attribute bit field
+
+        @name           Name index of the member field
+	
+	reserved	0
+
+Once a static data member has been found in this list, its symbol is  found
+by qualifying the  name with  its class  (T::name) and  then searching  the
+symbol table for a symbol by that name with the correct type index.
+
+
+Virtual Function Table Pointer
+LF_VFUNCTAB	0x040a
+
+This leaf specifies virtual table pointers  within  the  class.   It  is  a
+requirement that this record be  emitted  in  the  field  list  before  any
+virtual functions are emitted to the field list.
+
+        DW      LF_VFUNCTAB
+        DD      @type
+	*	offset
+
+	@type       	Index to the pointer record describing the pointer.
+			The pointer  will in  turn have  a LF_VTSHAPE  type
+			record as  the  underlying  type.   Note  that  the
+			offset of the virtual  function table pointer  from
+			the address point of the class is always zero.
+
+	offset       	Numeric field  giving  the  offset  of  the  vtable
+			pointer within the class.
+
+
+Member Function
+LF_METHOD	0x0408
+
+This leaf specifies the member functions of a class.
+
+        DW      LF_METHOD
+        DW      count
+        DD      @mList
+        DD      @name
+
+	count       	Number of occurrences of function within the class.
+			If the  functin is  overloaded then  there will  be
+			multiple entries in the method list.
+
+        @mList          Type  index of method list
+
+        @name           Name index of method
+
+
+Enumeration Name and Value
+LF_ENUMERATE	0x403
+
+This  leaf  specifies  the  name  and  value  of  an  enumerate  within  an
+enumeration.
+
+        DW      LF_ENUMERATE
+        DW      attribute
+        DD      @name
+        DD	reserved
+        *       value
+
+        attribute       Member attribute bit field
+
+        value           Numeric leaf specifying the value of enumerate
+
+        @name           Name index of the member field
+
+	reserved	0
+
+
+Nested Type Definition
+LF_NESTTYPE	0x0409
+
+This leaf  specifies  nested  type  definition  with  classes,  structures,
+unions, or enums.
+
+        DW      LF_NESTTYPE
+        DD      @index
+        DD      @name
+        DD	reserved
+
+        @index          Type index of nested type
+
+        @name           Name index of type
+	
+	reserved	0
+	
+Numeric Leaf
+LF_NUMERIC	0x8000
+
+The following leaves are used  in symbols  and types  where actual  numeric
+values need to be specified.  When the symbol or type processor knows  that
+a numeric leaf is present, the next  two bytes of the record are  examined.
+If the value of these two  bytes is less than LF_NUMERIC(0x8000), then  the
+two bytes contain the actual value.  If the value is greater than or  equal
+to LF_NUMERIC (0x8000), then  the numeric  data follows  the two-byte  leaf
+index and is contained in the number of bytes specified by the leaf  index.
+Note that there is not a need for a LF_UCHAR numeric field since the  value
+of the eight-bit unsigned  character  is  less  than  0x8000.   It  is  the
+responsibility of routines reading numeric  fields to handle the  potential
+nonalignment of the data fields.
+
+
+Signed Char
+LF_CHAR		0x8000
+
+        DW      LF_CHAR
+        DB      char
+
+        char            8-bit value
+
+
+Signed Short
+LF_SHORT	0x8001
+
+        DW      LF_SHORT
+        DW      short
+
+        short           16-bit signed value
+
+
+Unsigned Short
+LF_USHORT	0x8002
+
+        DW      LF_USHORT
+        DW      ushort
+
+        ushort          16-bit unsigned value
+
+
+Signed Long
+LF_LONG		0x8003
+
+        DW              LF_LONG
+        DD              long
+
+        long            32-bit signed value
+
+
+Unsigned Long
+LF_ULONG	0x8004
+
+        DW              LF_ULONG
+        DD              ulong
+
+        ulong           32-bit unsigned value
+
+
+32 Bit Float
+LF_REAL32	0x8005
+
+        DW              LF_REAL32
+        DD              real32
+
+        real32          32-bit floating-point value
+
+
+48 Bit Float
+LF_REAL48	0x800b
+
+        DW              LF_REAL48
+        DF              real48
+
+        real48          48-bit floating point value
+
+
+64 Bit Float
+LF_REAL64	0x8006
+
+        DW              LF_REAL64
+        DQ              real64
+
+        real64          64-bit floating-point value
+
+
+80 Bit Float
+LF_REAL80	0x8007
+
+        DW              LF_REAL80
+        DT              real80
+
+        real80          80-bit floating-point value
+
+
+
+128 Bit Float
+LF_REAL128	0x8008
+
+        DW              LF_REAL128
+        DT,DF           real128
+
+        real128         128-bit floating-point value
+
+
+Signed Quadword
+LF_QUADWORD	0x8009
+
+        DW              LF_QUADWORD
+        DQ              quadword
+
+        quadword        64-bit signed value
+
+
+Unsigned Quadword
+LF_UQUADWORD	0x800a
+
+        DW              LF_UQUADWORD
+        DQ              uquadword
+
+        uquadword       64-bit unsigned value
+
+
+Predefined Primitive Types
+
+Format of Reserved Types
+
+Types 0-4095 (0 - 0x1000)  are reserved.  These  values are interpreted  as
+bit fields with the following sizes and meanings.
+
+        size            :3
+        reserved1       :1
+        type            :4
+        mode            :3
+        reserved2       :5
+
+        type            Type
+        0x00            Special
+        0x01            Signed integral value
+        0x02            Unsigned integral value
+        0x03            Boolean
+        0x04            Real
+        0x05            Complex
+        0x06            Special2
+        0x07            Really int value
+        0x08            Reserved
+        0x09            Reserved
+        0x0a            Reserved
+        0x0b            Reserved
+        0x0c            Reserved
+        0x0d            Reserved
+        0x0e            Reserved
+        0x0f            Reserved for Code View expression
+			evaluator use
+
+        size            Enumerated value for each of the types
+
+        (Type = special)
+        0x00            No type
+        0x01            Absolute symbol
+        0x02            Segment
+        0x03            Void
+        0x04            Basic 8-byte currency value
+        0x05            Near Basic string
+        0x06            Far Basic string
+        0x07            Untranslated type from CV 3.x format
+
+        (Type=signed/unsigned integral and Boolean values)
+        0x00            1 byte
+        0x01            2 byte
+        0x02            4 byte
+        0x03            8 byte
+        0x04            Reserved
+        0x05            Reserved
+        0x06            Reserved
+        0x07            Reserved
+
+        (Type=real and complex)
+        0x00            32 bit
+        0x01            64 bit
+        0x02            80 bit
+        0x03            128 bit
+        0x04            48 bit
+        0x05            Reserved
+        0x06            Reserved
+        0x07            Reserved
+
+        (Type=special2)
+        0x00            Bit
+        0x01            Pascal CHAR
+
+        (Type=Really int)
+        0x00            Char
+        0x01            Wide character
+        0x02            2 byte signed integer
+        0x03            2 byte unsigned integer
+        0x04            4 byte signed integer
+        0x05            4 byte unsigned integer
+        0x06            8 byte signed integer
+        0x07            8 byte unsigned integer
+
+        mode            Mode
+	
+        0x00            Direct; not a pointer
+        0x01            Near pointer
+        0x02            Far pointer
+        0x03            Huge pointer
+        0x04            32 bit near pointer
+        0x05            32 bit far pointer
+        0x06            64 bit near pointer
+        0x07            Reserved
+
+/*  Special Types  */
+
+#define T_NOTYPE        0x0000   //  Uncharacterized type (no type)
+#define T_ABS           0x0001   //  Absolute symbol
+#define T_SEGMENT       0x0002   //  Segment type
+#define T_VOID          0x0003   //  Void
+#define T_PVOID         0x0103   //  Near pointer to void
+#define T_PFVOID        0x0203   //  Far pointer to void
+#define T_PHVOID        0x0303   //  Huge
+#define T_CURRENCY      0x0004   //  Basic 8 byte currency value
+#define T_NBASICSTR     0x0005   //  Near Basic string
+#define T_FBASICSTR     0x0006   //  Far Basic string
+#define T_NOTTRANS      0x0007   //  Untranslated type record from
+				 //  CV 3.x format
+#define T-BIT           0x0060   //  Bit
+#define T_PASCHAR       0x0061   //  Pascal CHAR
+
+/*  Primitive Type Listing  */
+
+/*  Character types  */
+
+#define T_CHAR          0x0010    //  8-bit signed
+#define T_UCHAR         0x0020    //  8-bit unsigned
+#define T_PCHAR         0x0110    //  Near pointer to 8-bit signed
+#define T_PUCHAR        0x0120    //  Near pointer to 8-bit unsigned
+#define T_PFCHAR        0x0210    //  Far pointer to 8-bit signed
+#define T_PFUCHAR       0x0220    //  Far pointer to 8-bit unsigned
+#define T_PHCHAR        0x0310    //  Huge pointer to 8-bit signed
+#define T_PHUCHAR       0x0320    //  Huge pointer to 8-bit unsigned
+#define T_32PCHAR       0x0410    //  16:32 near pointer to 8-bit signed
+#define T_32PUCHAR      0x0420    //  16:32 near pointer to 8-bit unsigned
+#define T_32PFCHAR      0x0510    //  16:32 far pointer to 8-bit signed
+#define T_32PFUCHAR     0x0520    //  16:32 far pointer to 8-bit unsigned
+
+
+/*  Really a character types  */
+
+#define T_RCHAR         0x0070     //  Real char
+#define T_PRCHAR        0x0170     //  Near pointer to a real char
+#define T_PFRCHAR       0x0270     //  Far pointer to a real char
+#define T_PHRCHAR       0x0370     //  Huge pointer to a real char
+#define T_32PRCHAR      0x0470     //  16:32 near pointer to a real char
+#define T_32PFRCHAR     0x0570     //  16:32 far pointer to a real char
+
+
+/*  Wide character types  */
+
+#define T_WCHAR         0x0071     //  wide char
+#define T_PWCHAR        0x0171     //  Near pointer to a wide char
+#define T_PFWCHAR       0x0271     //  Far pointer to a wide char
+#define T_PHWCHAR       0x0371     //  Huge pointer to a wide char
+#define T_32PWCHAR      0x0471     //  16:32 near pointer to a wide char
+#define T_32PFWCHAR     0x0571     //  16:32 far pointer to a wide char
+
+
+/*  Really 16 bit integer types  */
+
+#define T_INT2          0x0072      //  really 16-bit signed int
+#define T_UINT2         0x0073      //  really 16-bit unsigned int
+#define T_PINT2         0x0172      //  Near pointer to 16-bit signed int
+#define T_PUINT2        0x0173      //  Near pointer to 16-bit unsigned int
+#define T_PFINT2        0x0272      //  Far pointer to 16-bit signed int
+#define T_PFUINT2       0x0273      //  Far pointer to 16-bit unsigned int
+#define T_PHINT2        0x0372      //  Huge pointer to 16-bit signed int
+#define T_PHUINT2       0x0373      //  Huge pointer to 16-bit unsigned int
+#define T_32PINT2       0x0472      //  16:32 near pointer to 16-bit signed
+				    //  int
+#define T_32PUINT2      0x0473      //  16:32 near pointer to 16-bit
+				    //  unsigned int
+#define T_32PFINT2      0x0572      //  16:32 far pointer to 16-bit signed
+				    //  int
+#define T_32PFUINT2     0x0573      //  16:32 far pointer to 16-bit
+				    //  unsigned int
+
+/*  16-bit short types  */
+
+#define T_SHORT         0x0011      //  16-bit signed
+#define T_USHORT        0x0021      //  16-bit unsigned
+#define T_PSHORT        0x0111      //  Near pointer to 16-bit signed
+#define T_PUSHORT       0x0121      //  Near pointer to 16-bit unsigned
+#define T_PFSHORT       0x0211      //  Far pointer to 16-bit signed
+#define T_PFUSHORT      0x0221      //  Far pointer to 16-bit unsigned
+#define T_PHSHORT       0x0311      //  Huge pointer to 16-bit signed
+#define T_PHUSHORT      0x0321      //  Huge pointer to 16-bit unsigned
+#define T_32PSHORT      0x0411      //  16:32 near pointer to 16-bit signed
+#define T_32PUSHORT     0x0421      //  16:32 near pointer to 16-bit unsigned
+#define T_32PFSHORT     0x0511      //  16:32 far pointer to 16-bit signed
+#define T_32PFUSHORT    0x0521      //  16:32 far pointer to 16-bit unsigned
+
+
+/*  Really 32 bit integer types  */
+
+#define T_INT4          0x0074      //  really 32-bit signed int
+#define T_UINT4         0x0075      //  really 32-bit unsigned int
+#define T_PINT4         0x0174      //  Near pointer to 32-bit signed int
+#define T_PUINT4        0x0175      //  Near pointer to 32-bit unsigned int
+#define T_PFINT4        0x0274      //  Far pointer to 32-bit signed int
+#define T_PFUINT4       0x0275      //  Far pointer to 32-bit unsigned int
+#define T_PHINT4        0x0374      //  Huge pointer to 32-bit signed int
+#define T_PHUINT4       0x0375      //  Huge pointer to 32-bit unsigned int
+#define T_32PINT4       0x0474      //  16:32 near pointer to 32-bit signed
+				    //  int
+#define T_32PUINT4      0x0475      //  16:32 near pointer to 32-bit
+				    //  unsigned int
+#define T_32PFINT4      0x0574      //  16:32 far pointer to 32-bit signed
+				    //  int
+#define T_32PFUINT4     0x0575      //  16:32 far pointer to 32-bit
+				    //  unsigned int
+
+/*  32-bit long types  */
+
+#define T_LONG         0x0012       //  32-bit signed
+#define T_ULONG        0x0022       //  32-bit unsigned
+#define T_PLONG        0x0112       //  Near pointer to 32-bit signed
+#define T_PULONG       0x0122       //  Near pointer to 32-bit unsigned
+#define T_PFLONG       0x0212       //  Far pointer to 32-bit signed
+#define T_PFULONG      0x0222       //  Far pointer to 32-bit unsigned
+#define T_PHLONG       0x0312       //  Huge pointer to 32-bit signed
+#define T_PHULONG      0x0322       //  Huge pointer to 32-bit unsigned
+#define T_32PLONG      0x0412       //  16:32 near pointer to 32-bit signed
+#define T_32PULONG     0x0422       //  16:32 near pointer to 32-bit unsigned
+#define T_32PFLONG     0x0512       //  16:32 far pointer to 32-bit signed
+#define T_32PFULONG    0x0522       //  16:32 far pointer to 32-bit unsigned
+
+
+/*  Really 64-bit int types  */
+
+#define T_INT8         0x0076       //  64-bit signed int
+#define T _UINT8       0x0077       //  64-bit unsigned int
+#define T_PINT8        0x0176       //  Near pointer to 64-bit signed int
+#define T_PUINT8       0x0177       //  Near pointer to 64-bit unsigned int
+#define T_PFINT8       0x0276       //  Far pointer to 64-bit signed int
+#define T_PFUINT8      0x0277       //  Far pointer to 64-bit unsigned int
+#define T_PHINT8       0x0376       //  Huge pointer to 64-bit signed int
+#define T_PHUINT8      0x0377       //  Huge pointer to 64-bit unsigned int
+#define T_32PINT8      0x0476       //  16:32 near pointer to 64-bit signed
+				    //  int
+#define T_32PUINT8     0x0477       //  16:32 near pointer to 64-bit unsigned
+				    //  int
+#define T_32PFINT8     0x0576       //  16:32 far pointer to 64-bit signed int
+#define T_32PFUINT8    0x0577       //  16:32 far pointer to 64-bit unsigned
+				    //  int
+
+
+/*  64-bit integral types  */
+
+#define T_QUAD          0x0013      //  64-bit signed
+#define T_UQUAD         0x0023      //  64-bit unsigned
+#define T_PQUAD         0x0113      //  Near pointer to 64-bit signed
+#define T_PUQUAD        0x0123      //  Near pointer to 64-bit unsigned
+#define T_PFQUAD        0x0213      //  Far pointer to 64-bit signed
+#define T_PFUQUAD       0x0223      //  Far pointer to 64-bit unsigned
+#define T_PHQUAD        0x0313      //  Huge pointer to 64-bit signed
+#define T_PHUQUAD       0x0323      //  Huge pointer to 64-bit unsigned
+#define T_32PQUAD       0x0413      //  16:32 near pointer to 64-bit signed
+#define T_32PUQUAD      0x0423      //  16:32 near pointer to 64-bit unsigned
+#define T_32PFQUAD      0x0513      //  16:32 far pointer to 64-bit signed
+#define T_32PFUQUAD     0x0523      //  16:32 far pointer to 64-bit unsigned
+
+
+/*  32-bit integral types */
+
+#define T_REAL32        0x0040      //  32-bit real
+#define T_PREAL32       0x0140      //  Near pointer to 32-bit real
+#define T_PFREAL32      0x0240      //  Far pointer to 32-bit real
+#define T_PHREAL32      0x0340      //  Huge pointer to 32-bit real
+#define T_32PREAL32     0x0440      //  16:32 near pointer to 32-bit real
+#define T_32PFREAL32    0x0540      //  16:32 far pointer to 32-bit real
+
+
+/*  48-bit real types  */
+
+#define T_REAL48        0x0044      //  48-bit real
+#define T_PREAL48       0x0144      //  Near pointer to 48-bit real
+#define T_PFREAL48      0x0244      //  Far pointer to 48-bit real
+#define T_PHREAL48      0x0344      //  Huge pointer to 48-bit real
+#define T_32PREAL48     0x0444      //  16:32 near pointer to 48-bit real
+#define T_32PFREAL48    0x0544      //  16:32 far pointer to 48-bit real
+
+/*  64-bit real types  */
+
+#define T_REAL64        0x0041      //  64-bit real
+#define T_PREAL64       0x0141      //  Near pointer to 64-bit real
+#define T_PFREAL64      0x0241      //  Far pointer to 64-bit real
+#define T_PHREAL64      0x0341      //  Huge pointer to 64-bit real
+#define T_32PREAL64     0x0441      //  16:32 near pointer to 64-bit real
+#define T_32PFREAL64    0x0541      //  16:32 far pointer to 64-bit real
+
+/*  80-bit real types  */
+
+#define T_REAL80        0x0042      //  80-bit real
+#define T_PREAL80       0x0142      //  Near pointer to 80-bit real
+#define T_PFREAL80      0x0242      //  Far pointer to 80-bit real
+#define T_PHREAL80      0x0342      //  Huge pointer to 80-bit real
+#define T_32PREAL80     0x0442      //  16:32 near pointer to 80-bit real
+#define T_32PFREAL80    0x0542      //  16:32 far pointer to 80-bit real
+
+
+/*  128-bit real types  */
+
+#define T_REAL128       0x0043      //  128-bit real
+#define T_PREAL128      0x0143      //  Near pointer to 128-bit real
+#define T_PFREAL128     0x0243      //  Far pointer to 128-bit real
+#define T_PHREAL128     0x0343      //  Huge pointer to 128-bit real
+#define T_32PREAL128    0x0443      //  16:32 near pointer to 128-bit real
+#define T_32PFREAL128   0x0543      //  16:32 far pointer to 128-bit real
+
+
+*/  32-bit complex types  */
+
+#define T_CPLX32        0x0050       //  32-bit complex
+#define T_PCPLX32       0x0150       //  Near pointer to 32-bit complex
+#define T_PFCPLX32      0x0250       //  Far pointer to 32-bit complex
+#define T_PHCPLX32      0x0350       //  Huge pointer to 32-bit complex
+#define T_32PCPLX32     0x0450       //  16:32 near pointer to 32-bit complex
+#define T_32PFCPLX32    0x0550       //  16:32 far pointer to 32-bit complex
+
+/*  64-bit complex types  */
+
+#define T_CPLX64        0x0051       //  64-bit complex
+#define T_PCPLX64       0x0151       //  Near pointer to 64-bit complex
+#define T_PFCPLX64      0x0251       //  Far pointer to 64-bit complex
+#define T_PHCPLX64      0x0351       //  Huge pointer to 64-bit complex
+#define T_32PCPLX64     0x0451       //  16:32 near pointer to 64-bit complex
+#define T_32PFCPLX64    0x0551       //  16:32 far pointer to 64-bit complex
+
+/*  80-bit complex types  */
+
+#define T_CPLX80        0x0052       //  80-bit complex
+#define T_PCPLX80       0x0152       //  Near pointer to 80-bit complex
+#define T_PFCPLX80      0x0252       //  Far pointer to 80-bit complex
+#define T_PHCPLX80      0x0352       //  Huge pointer to 80-bit complex
+#define T_32PCPLX80     0x0452       //  16:32 near pointer to 80-bit complex
+#define T_32PFCPLX80    0x0552       //  16:32 far pointer to 80-bit complex
+
+/*  128-bit complex types  */
+
+#define T_CPLX128       0x0053       //  128-bit complex
+#define T_PCPLX128      0x0153       //  Near pointer to 128-bit complex
+#define T_PFCPLX128     0x0253       //  Far pointer to 128-bit complex
+#define T_PHCPLX128     0x0353       //  Huge pointer to 128-bit complex
+#define T_32PCPLX128    0x0453       //  16:32 near pointer to 128-bit complex
+#define T_32PFCPLX128   0x0553       //  16:32 far pointer to 128-bit complex
+
+
+/*  Boolean types  */
+
+#define  T_BOOL08       0x0030       //  8-bit boolean
+#define  T_BOOL16       0x0031       //  16-bit boolean
+#define  T_BOOL32       0x0032       //  32-bit boolean
+#define  T_PBOOL08      0x0130       //  Near pointer to 8-bit boolean
+#define  T_PBOOL16      0x0131       //  Near pointer to 16-bit boolean
+#define  T_PBOOL32      0x0132       //  Near pointer to 32-bit boolean
+#define  T_PFBOOL08     0x0230       //  Far pointer to 8-bit boolean
+#define  T_PFBOOL16     0x0231       //  Far pointer to 16-bit boolean
+#define  T_PFBOOL32     0x0232       //  Far pointer to 32-bit boolean
+#define  T_PHBOOL08     0x0330       //  Huge pointer to 8-bit boolean
+#define  T_PHBOOL16     0x0331       //  Huge pointer to 16-bit boolean
+#define  T_PHBOOL32     0x0332       //  Huge pointer to 32-bit boolean
+#define  T_32PBOOL08    0x0430       //  16:32 near pointer to 8-bit boolean
+#define  T_32PFBOOL08   0x0530       //  16:32 far pointer to 8-bit boolean
+#define  T_32PBOOL16    0x0431       //  16:32 near pointer to 16-bit boolean
+#define  T_32PFBOOL16   0x0531       //  16:32 far pointer to 16-bit boolean
+#define  T_32PBOOL32    0x0432       //  16:32 near pointer to 32-bit boolean
+#define  T_32PFBOOL32   0x0532       //  16:32 far pointer to 32-bit boolean
+
+
+Codes for Register Variables
+
+When the compiler emits a  symbol that  has been  unregistered, the  symbol
+record specifies  the  register  by  a  register  enumeration  value.   The
+enumeration is unique to each hardware architecture supported.
+
+
+Intel 80x86/80x87 Architectures
+
+        0       none
+
+
+8-bit registers
+        1       AL
+        2       CL
+        3       DL
+        4       BL
+        5       AH
+        6       CH
+        7       DH
+        8       BH
+
+
+16-bit registers
+        9       AX
+        10      CX
+        11      DX
+        12      BX
+        13      SP
+        14      BP
+        15      SI
+        16      DI
+
+
+32-bit resisters
+        17      EAX
+        18      ECX
+        19      EDX
+        20      EBX
+        21      ESP
+        22      EBP
+        23      ESI
+        24      EDI
+
+
+Segment registers
+        25      ES
+        26      CS
+        27      SS
+        28      DS
+        29      FS
+        30      GS
+
+
+Special cases
+        31      IP
+        32      FLAGS
+        33      EIP
+
+
+PCODE Registers
+        40      PCODE TEMP
+        41      PCODE TEMPH
+        42      PCODE QUOTE
+        43-47   Reserved
+
+
+Register extensions for 80x87
+128     ST(0)
+129     ST(1)
+130     ST(2)
+131     ST(3)
+132     ST(4)
+133     ST(5)
+134     ST(6)
+135     ST(7)
+136     CONTROL
+137     STATUS
+138     TAG
+139     FPIP
+140     FPCS
+141     FPDO
+142     FPDS
+143     ISEM
+
+
+MIPS4000 Architectures
+
+Indices not yet specified.
+
+
+[-----------------------------------------------------------------------]
+[	   Symbol and Type OMF Format Borland Executable Files		]
+[-----------------------------------------------------------------------]
+
+Introduction
+
+This section describes the format used to embed debugging information  into
+the executable file.
+
+Debug Information Format
+
+The format encompasses a block of  data which goes at  the end of the  .EXE
+file,  i.e.,  after   the   header   plus   load   image,   overlays,   and
+Windows/Presentation Manager  resource  compiler  information.   The  lower
+portion of the file is unaffected by the additional data.
+
+The last eight bytes of the file contain a signature and a long file offset
+from the end of the file (lfoBase).  The signature is FBxx, where xx is the
+version number.  The  long  offset  indicates  the  position  in  the  file
+(relative to the end of the file)  of the base address.  For the LX  format
+executables, the base address  is determined by  looking at the  executable
+header.
+
+The signatures have the following meanings:
+
+	FB09       	The signature for a Borland 32 bit symbol file.
+	
+The value
+
+        lfaBase=length of the file - lfoBase
+
+gives the base address of the start of the Symbol and Type OMF  information
+relative to  the beginning  of the  file.  All  other file  offsets in  the
+Symbol and Type OMF are relative to  the lfaBase.  At the base address  the
+signature is repeated, followed by the long displacement to the  subsection
+directory (lfoDir).  All subsections start on a long word boundary and  are
+designed to maintain  natural alignment internally  in each subsection  and
+within the subsection directory.
+
+Subsection Directory
+
+The subsection directory has the format
+
+     Directory header
+
+     Directory entry 0
+
+     Directory entry 1
+
+	    .
+	    .
+	    .
+
+     Directory entry n
+
+
+The subsection directory is prefixed  with  a  directory  header  structure
+indicating size and number of subsection directory entries that follow.
+
+
+                DW      cbDirHeader
+                DW      cbDirEntry
+                DD      cDir
+                DD      lfoNextDir
+                DD      flags
+
+
+        cbDirHeader     Length of this structure
+
+        cbDirEntry      Length of each directory entry
+
+        cDir            Number of directory entries
+
+	lfoNextDir      Offset from lfoBase of next directory.  This field
+			is used by the incremental linker to point to the
+			next directory containing Symbol and Type OMF
+			information from an incremental link.  It is always
+			set to 0 for FB07 headers.
+
+	flags       	Flags describing directory  and subsection  tables.
+			No values have been defined for this field.
+
+
+The directory header structure is  followed by the directory entries  which
+specify the  subsection type,  module index,  file offset,  and size.   The
+subsection directory gives the location (LFO) and size of each  subsection,
+as well as its type and module number if applicable.
+
+        DW      subsection
+        DW      iMod
+        DD      lfo
+        DD      cb
+
+	subsection      Subdirectory indes.  See  the  table  below  for  a
+			listing of the valid subsection indices.
+
+	iMod       	Module index.  This number is based on 1, and  zero
+			is never  a  valid  index.   The  index  0xffff  is
+			reserved for tables that are not associated with  a
+			specific    module.     These    tables     include
+			sstLibraries,   sstGlobalSym,   sstGlobalPub    and
+			sstGlobalTypes.
+
+        lfo             Offset from the base offset lfoBase
+
+        cb              Number of bytes in subsection
+
+There is no requirement for a particular subsection of a particular  module
+to exist.
+
+The following is the layout of the FB09 debug information in the image:
+
+FB09 Header
+
+  sstModule [1]
+	.
+	.
+	.
+  sstModule [n]
+
+  sstAlignSym	[1]
+  sstSrcModule	[1]
+	.
+	.
+	.
+  sstAlignSym	[n]
+  sstSrcModule	[n]
+
+  sstGlobalSym
+  sstGlobalTypes
+  sstNames
+
+  SubSection Directory
+
+FB09 Trailer
+
+Subsection Types (sst...)
+
+        sstModule               0x120
+        sstTypes                0x121
+        sstSymbols              0x124
+        sstAlignSym             0x125
+        sstSrcModule            0x127
+        sstGlobalSym            0x129
+        sstGlobalTypes          0x12b
+	sstNames		0x130
+
+
+sstModule	0x120
+
+This describes the basic information about an object module including  code
+segments, module name,  and the  number of  segments for  the modules  that
+follow.  Directory entries for  sstModules  precede  all  other  subsection
+directory entries.
+
+        DW              ovlNumber
+        DW              iLib
+        DW              cSeg
+        DW              Style
+        DD              @name
+	DD		timeStamp
+	DD*3		reserved
+        *               SegInfo
+
+        ovlNumber       Overlay numer
+
+	iLib       	Index into sstLibraries  subsection if this  module
+			was linked from a library
+
+	cSeg       	Count of the number  of code  segments this  module
+			contributes to
+
+	Style       	Debugging style  for this  module.  Currently  only
+			"CV" is  defined.   A  module  can  have  only  one
+			debugging style.   If a  module contains  debugging
+			information   in   an   unrecognized   style,   the
+			information will be discarded.
+
+        @name           Name index of module.
+
+	timeStamp	Time stamp from the OBJ file.
+
+	reserved	Set to 0.
+
+	SegInfo         Detailed information about  each segment that  code
+			is contributed to.  This is an array of cSeg  count
+			segment information descriptor structures.
+
+SegInfo is a structure that  describes  each  segment  to  which  a  module
+contributes code.  It is formatted as follows:
+
+        DW              Seg
+        DW              flags
+        DD              offset
+        DD              cbSeg
+
+        Seg             Segment that this structure describes
+
+        flags		Attributes for the logical segment.  The following
+			attributes are defined:
+				0x0000	Data segment
+				0x0001	Code segment
+
+        offset          Offset in segment where the code starts
+
+        cbSeg           Count of the number of bytes of code in the segment
+
+
+sstAlignSym	0x0125
+
+The linker writes the  remaining unpacked  symbols for  a module  back to the
+executable in a subsection of this  type.  All symbols have been padded  to
+fall on a long word boundary and the lexical scope linkage fields have been
+initialized.
+
+
+sstSrcModule	0x0127
+
+This  table  describes  the  source  line  number  to  addressing   mapping
+information for a module.  The  table permits the  description of a  module
+containing multiple source files with each source file contributing code to
+one or more  code segments.   The base  addresses of  the tables  described
+below are all relative to the beginning of the sstSrcModule table.
+
+
+Module header
+
+Information for source file 1
+
+  Information for segment 1
+	     .
+	     .
+	     .
+  Information for segment n
+
+	     .
+	     .
+	     .
+	
+Information for source file n
+
+  Information for segment 1
+	     .
+	     .
+	     .
+  Information for segment n
+
+
+The module  header structure  describes the  source file  and code  segment
+organization of the module.  Each module header has the following format:
+
+        DW		cFile
+        DW		cSeg
+        4*cFile		baseSrcFile
+	8*cSeg		start/end
+	2*cSeg		seg
+
+	cFile       	The number of source  file  scontributing  code  to
+			segments
+
+	cSeg       	The number of code  segments  receiving  code  from
+			this module
+
+	baseSrcFile     This is an array of base offsets from the beginning
+			of the sstSrcModule table
+
+	start/end       An array  of two  32-bit offsets  per segment  that
+			receives code from this  module.  The first  offset
+			is the offset within the segment of the first  byte
+			of code from this module.  The second offset is the
+			ending address of the  code from this module.   The
+			order of these pairs corresponds to the ordering of
+			the segments in the  seg  array.   Zeros  in  these
+			entries means that the information is not known and
+			the file and line tables described below need to be
+			examined to determine if an address of interest  is
+			contained within the code from this module.
+
+	seg       	An array of segment indices that receive code  from
+			this module.  If the  number  of  segments  is  not
+			even, a pad word  is inserted  to maintain  natural
+			alignment.
+
+
+The file table  describes the  code segments  that receive  code from  this
+source file.  Source file entries have the following format:
+
+	DW		cSeg
+	DD		@name
+	4*cSeg		baseSrcLn
+	8*cSeg		start/end
+	*		cbName
+
+	cSeg       	Number of segments  that  receive  code  from  this
+			source file.  If the  source file contributes  code
+			multiple times to a  segment, this is reflected  in
+			this count.
+
+	@name       	Name index of Source file  name.   This  can  be  a
+			fully or partially qualified path name.
+
+	baseSrcLn       An array of  offsets for  the line/address  mapping
+			tables for each of  the segments that receive  code
+			from this source file.
+
+	start/end       An array  of two  32-bit offsets  per segment  that
+			receives code from this  module.  The first  offset
+			is the offset within the segment of the first  byte
+			of code from this module.  The second offset is the
+			ending address of the  code from this module.   The
+			order of these pairs corresponds to the ordering of
+			the segments in the  seg  array.   Zeros  in  these
+			entries means that the information is not known and
+			the file and line tables described below need to be
+			examined to determine if an address of interest  is
+			contained within the code from this module.
+
+        cbName          Count of the number of bytes in source file name
+
+
+The line number to address mapping information is contained in a table with
+the following format:
+
+        DW		Seg
+        DW		cPair
+        4*cPair		offset
+	2*cPair		linenumber
+
+        Seg             Segment index for this table
+
+
+
+
+        cPair           Count of the number of source line pairs to follow
+
+
+	offset       	An array of 32-bit  offsets for  the offset  within
+			the code segment of the  start of ine contained  in
+			the parallel array linenumber.
+
+	linenumber      This is an array of  16-bit  line  numbers  of  the
+			lines in the source file  that  cause  code  to  be
+			emitted  to  the  code  segment.   This  array   is
+			parallel to the offset  array.   If  cPair  is  not
+			even, then a  zero  word  is  emitted  to  maintain
+			natural alignment in the sstSrcModule table.
+
+sstGlobalSym	0x129
+
+This section contains globally compacted symbols.  The format of the  table
+is a header specifying the symbol and address hash functions, the length of
+the symbol information, the length  of the symbol  hash function data,  and
+the length of address hash function  data.  This is followed by the  symbol
+information followed by the symbol hash tables followed by the address hash
+tables.  When the pack  utility  writes  the  sstGlobals  subsection,  each
+symbol is zero-padded such that the  following  symbol  starts  on  a  long
+boundary.  The length field is adjusted by the pad count.  Note that symbol
+and/or address hash data can be  discarded and the globally packed  symbols
+be linearly searched.  Hash function index  0  means  no  hash  data.   The
+format of the  table header  structure is  the same  as the  header of  the
+sstGlobalPub table.  The global symbols  are sorted by address, with  S_UDT
+symbols being sorted to the front  of  the  sstGlobalSym  section.   If  an
+S_ENTRYxx symbol was encountered (there can  only be one), it is placed  at
+the front of the  sstGlobalSym  section  before  the  S_UDT  symbols.   The
+cOtherSym field in the header does not include the S_ENTRYxx symbol.
+
+
+sstGlobalTypes	0x12b
+
+This subsection contains the packed  type records for the executable  file.
+The first long word of the subsection  contains the number of types in  the
+table.  This count is  followed by a count-sized  array of long offsets  to
+the  corresponding  type  record.   As  the  sstGlobalTypes  subsection  is
+written, each  type record  is forced  to start  on a  long word  boundary.
+However, the length of the  type string is NOT  adjusted by the pad  count.
+The remainder of the subsection contains  the type records.
+
+           cType
+
+    offType[cType]
+
+       type string 0
+
+       type string 1
+
+
+
+       type string n
+
+count of the number of types
+offset of each type string from the beginning of table
+type string for type index 0x1000
+type string for type index 0x1001
+
+type string for type index 0x1000 + n
+
+
+sstNames	0x130
+
+All names will be placed by the  translators into a $$NAMES segment in  the
+OBJs.  The linker will coalesce these names into a single global name  pool
+of length preceeded null terminated names.  The names as they appear in the
+OBJs will be length preceeded names.  The  length byte will be used by  the
+linker for efficient  hashing.  The  debugger wants  the null  termination.
+Name indices in all of  the symbol  and type  records are  1 based  indices
+which reference a name in this table.
+
+
+[End of document]
+

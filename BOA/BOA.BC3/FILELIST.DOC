@@ -1,0 +1,46 @@
+FILES ON DISKS
+--------------
+
+DISK 1
+------
+INSTALL   EXE - Install Program
+UNZIP     EXE - Unzip program
+README    COM - Readme file viewer
+DECOMP    ZIP - 
+   BUILDDH   BAT - Batch file for Open Architecture Package
+   DEHELP      C - Source file for helpfile de-compiler
+   DEHELP    PRJ - Project file for helpfile de-compiler
+   DEHELP    DOC - Documentation for helpfile de-compiler
+
+EXAMPLE   ZIP - 
+   BUILDEX   BAT - Example file for Open Architecture Package
+   CONTEXT     H - Example file for Open Architecture Package
+   EXAM1      HL - Example file for Open Architecture Package
+   EXAM2      HL - Example file for Open Architecture Package
+   OPERINC   CPP - Example file for Open Architecture Package
+
+FILELIST  DOC - This file
+HL        ZIP - 
+   THELP     COM - THELP.COM program
+   HL        EXE - Borland's help compiler program
+
+OPEN      ZIP - 
+   FILECLAS  CPP - Source file for Open Architecture Package
+   FILECLAS    H - Include file for Open Architecture Package
+   PRJCLASS  CPP - Source file for Open Architecture Package
+   PRJCLASS    H - Include file for Open Architecture Package
+
+PROX      ZIP - 
+   PROX      CPP - Source file for Open Architecture Package
+   PROX      PRJ - Project file for Open Architecture Package
+
+STRIPPRJ  ZIP - 
+   STRIPPRJ  CPP - Source file for Open Architecture Package
+   STRIPPRJ  PRJ - Source file for Open Architecture Package
+
+TRANCOPY  ZIP - 
+   TRANCOPY  CPP - Source file for Open Architecture Package
+   TRANCOPY  PRJ - Project file for Open Architecture Package
+   VERSION     H - Include file for Open Architecture Package
+
+README        - Last minute changes and updates

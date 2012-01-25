@@ -1,0 +1,988 @@
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+Appendix D  OS/2 Load Module Format
+
+  OS/2 programs, dynlink libraries, and device drivers reside on the disk in
+  load modules called segmented executable files, or "new EXE" files. The
+  new EXE file format, which is also used by Microsoft Windows, is a
+  superset of the "old EXE" format used by MS-DOS.
+
+
+Components of a Segmented Executable File
+
+  A segmented EXE file is composed of many distinct but interrelated
+  elements, as shown in Figure D-1 on the following page. A hex dump of a
+  simple OS/2 program (the PORTS.EXE file from Chapter 14) is shown in
+  Figure D-2, beginning on p. 717, with the various elements of the file
+  marked. You can use the Microsoft utility program EXEHDR.EXE to display
+  much of the information described in this section for any specific OS/2
+  program, library, or driver.
+
+  Throughout the remainder of this appendix, the term counted string is used
+  to refer to a string that consists of a length byte followed by the ASCII
+  characters of the actual string. The value of the length byte does not
+  include the length byte itself, and the string is not terminated by a null
+  byte.
+
+   ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+   ³	      Old EXE header	       ³
+   ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+   ³	    MS-DOS stub program        ³
+   ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+   ³	      New EXE header	       ³
+   ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+   ³	       Segment table	       ³
+   ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+   ³	      Resource table	       ³
+   ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+   ³	   Resident names table        ³
+   ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+   ³	  Module reference table       ³
+   ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+   ³	   Imported names table        ³
+   ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+   ³		Entry table	       ³
+   ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+   ³	  Nonresident names table      ³
+   ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ ÄÄÄÄÄ´
+   ³	  Segment #1 code or data      ³
+   ³ Segment #1 relocation information ³
+   ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+  ÄÁÄ				      ÄÁÄ
+  ÄÂÄ				      ÄÂÄ
+   ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+   ³	  Segment #n code or data      ³
+   ³ Segment #n relocation information ³
+   ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+   ³				       ³
+   ³		 Resources	       ³
+   ³				       ³
+   ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+
+  Figure D-1.  Block diagram of a file containing an OS/2 program, dynlink
+  library, or device driver.
+
+  ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+			  0  1	2  3  4  5  6  7  8  9	A  B  C  D  E  F
+		    ÚÄ0000  4D 5A 5E 00 04 00 00 00 04 00 00 00 FF FF 00 00  MZ^.............
+	    Old EXEÄ´ 0010  B8 00 00 00 00 00 00 00 40 00 00 00 00 00 00 00  ........@.......
+	     header ³ 0020  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  ................
+		    ÀÄ0030  00 00 00 00 00 00 00 00 00 00 00 00 80 00 00 00  ................
+
+		    ÚÄ0040  0E 1F BA 0E 00 B4 09 CD 21 B8 01 4C CD 21 54 68  ........!..L.!Th
+	     MS-DOSÄ´ 0050  69 73 20 70 72 6F 67 72 61 6D 20 63 61 6E 6E 6F  is program canno
+       stub program ³ 0060  74 20 62 65 20 72 75 6E 20 69 6E 20 44 4F 53 20  t be run in  DOS
+		    ÀÄ0070  6D 6F 64 65 2E 0D 0A 24 00 00 00 00 00 00 00 00  mode...$........
+
+		    ÚÄ0080  4E 45 05 01 7D 00 12 00 19 6A 56 F8 0A 02 03 00  NE..}....jV.....
+	    New EXEÄ´ 0090  00 00 00 10 00 00 02 00 00 00 03 00 03 00 01 00  ................
+	     header ³ 00A0  0D 00 40 00 58 00 58 00 71 00 73 00 0F 01 00 00  ..@.X.X.q.s.....
+		    ÀÄ00B0  02 00 09 00 00 00 01 00 00 00 00 00 00 00 00 00  ................
+
+	    Segment ÚÄ00C0  01 00 20 00 10 08 21 00 02 00 C1 00 00 0D C1 00  .. ...!.........
+	      tableÄÁÄ00D0  03 00 5E 00 01 0C 5E 00			     ..^...^.
+
+	   Resident ÚÄ				    05 50 4F 52 54 53 00 00	     .PORTS..
+	      namesÄ´ 00E0  05 52 50 4F 52 54 01 00 05 57 50 4F 52 54 02 00  .RPORT...WPORT..
+	      table ÀÄ00F0  00						     .
+
+   Module referenceÄÄÄÄÄÄÄÄÄÄÄÄ01 00					      ..
+	      table
+     Imported namesÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ00 08 44 4F 53 43 41 4C 4C 53		..DOSCALLS
+	      table
+	      Entry ÚÄ						   02 FF 09		  ...
+	      tableÄÁÄ0100  CD 3F 01 00 00 11 CD 3F 01 0F 00 01 00 00 00     .?.....?.......
+
+  Nonresident names ÚÄ							 09		    .
+	      tableÄÁÄ0110  50 4F 52 54 53 2E 45 58 45 00 00 00 	     PORTS.EXE...
+
+		    ÚÄ						00 00 00 00		 ....
+		    ³ 0120  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  ................
+		    ³	    .
+       Filler bytesÄ´	    .
+		    ³	    .
+		    ÀÄ01F0  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  ................
+
+       Code segment ÚÄ0200  55 8B EC 52 8B 56 06 EC 32 E4 5A 5D CA 02 00 55  U..R.V..2.Z]...U
+	  (IO_TEXT)ÄÁÄ0210  8B EC 50 52 8B 46 06 8B 56 08 EE 5A 58 5D CA 04  ..PR.F..V..ZX]..
+
+		    ÚÄ0220  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  ................
+		    ³	    .
+       Filler bytesÄ´	    .
+		    ³	    .
+		    ÀÄ03F0  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  ................
+
+		    ÚÄ0400  1E 07 6A 00 6A 00 6A 00 68 FF 00 9A FF FF 00 00  ..j.j.j.h.......
+		    ³	    .
+       Code segment ³	    .
+	    (_TEXT)Ä´	    .
+		    ³ 04B0  AA 8A C4 E8 02 00 AA C3 04 30 3C 39 7E 02 04 07  .........0<9~...
+		    ÀÄ04C0  C3
+
+		    ÚÄ	       04 00 03 01 98 00 01 00 05 00 03 01 7A 00 01  .............z..
+   Relocation tableÄ´ 04D0  00 8A 00 03 01 8F 00 01 00 45 00 03 00 63 00 FF  .........E...c..
+	  for _TEXT ÀÄ04E0  00 01 00					     ...
+
+		    ÚÄ		     00 00 00 00 00 00 00 00 00 00 00 00 00	.............
+		    ³ 04F0  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  ................
+		    ³	    .
+       Filler bytesÄ´	    .
+		    ³	    .
+		    ÀÄ05F0  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  ................
+
+		    ÚÄ0600  00 00 0D 0A 44 6F 73 50 6F 72 74 41 63 63 65 73  ....DosPortAcces
+		    ³	    .
+       Data segmentÄ´	    .
+	    (_DATA) ³	    .
+		    ÀÄ0650  20 20 46 0D 0A 4E 4E 4E 4E 20 20 20 4E 4E	       F..NNNN	NN
+  ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+  Figure D-2.  Simple segmented executable file (the PORTS.EXE program from
+  Chapter 14). Note that this program has no resource table nor any
+  resources at the end of the file.
+
+Old EXE Header
+
+  The format of the "old EXE" header is shown in Figure D-3. The most
+  important parts of this header are the familiar MS-DOS signature ("MZ")
+  for a relocatable executable file, the value 0040H at offset 0018H, which
+  is the offset of the MS-DOS stub program and which also signals the
+  existence of a "new EXE" header, and the 32-bit offset to the "new EXE"
+  header at offset 003CH.
+
+  00H ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+      ³ 	    Signature byte 1 `M'              ³
+  01H ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+      ³ 	    Signature byte 2 `Z'              ³
+  02H ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+      ³ 	  Length of file header and	      ³
+      ³ 	    program image MOD 512	      ³
+  04H ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+      ³       Length of file header and program       ³
+      ³ 	   image in 512-byte pages	      ³
+  06H ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+      ³ 	 Number of relocation table	      ³
+      ³ 	items for MS-DOS stub program	      ³
+  08H ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+      ³     Size of old EXE header in paragraphs      ³
+  0AH ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+      ³   Minimum paragraphs of extra memory needed   ³
+      ³     for execution of MS-DOS stub program      ³
+  0CH ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+      ³   Maximum paragraphs of extra memory needed   ³
+      ³     for execution of MS-DOS stub program      ³
+  0EH ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+      ³  Segment displacement of stub program stack   ³
+  10H ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+      ³ Contents of SP register at stub program entry ³
+  12H ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+      ³ 		  Checksum		      ³
+  14H ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+      ³ Contents of IP register at stub program entry ³
+  16H ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+      ³   Segment displacement of stub program code   ³
+  18H ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+      ³ File offset of first stub program relocation  ³
+      ³ item (0040H indicates segmented file present) ³
+  1AH ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+      ³ 	     Overlay number (0) 	      ³
+  1CH ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+      ³ 					      ³
+      ³ 		  Reserved		      ³
+      ³ 					      ³
+  24H ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+      ³ 	       OEM identifier		      ³
+  26H ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+      ³ 	       OEM information		      ³
+  28H ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+      ³ 					      ³
+      ³ 		  Reserved		      ³
+      ³ 					      ³
+  3CH ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+      ³ 					      ³
+      ³ 	File offset of new EXE header	      ³
+  40H ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+
+  Figure D-3.  Old EXE header at the beginning of an OS/2 executable file.
+
+MS-DOS Stub Program
+
+  The MS-DOS stub program, which is executed if the EXE file is loaded in
+  real mode under MS-DOS or in DOS compatibility mode under OS/2, always
+  begins at offset 0040H in the file. If you do not explicitly specify a
+  stub program in the DEF file when you link the OS/2 program, the Linker
+  inserts a program that displays an error message and terminates.
+
+  The stub program has its own relocation table and can be of any size. The
+  entry point, stack size, and the locations of the relocation table, code,
+  and data for the stub program are specified in the old EXE header.
+
+  When a program is "bound" for use as a Family application, the BIND
+  utility replaces the original stub program with a "real mode loader" and
+  an additional routine for each OS/2 API function that the program uses.
+  When the bound program is run, the real mode loader gains control,
+  performs all necessary relocations, and patches each API function call to
+  point to a routine that translates the parameters on the stack into the
+  appropriate parameters in registers and executes a software interrupt.
+
+New EXE Header
+
+  The new EXE header is much more complicated than the old EXE header. The
+  fields of the new EXE header are shown in Figure D-4. Some header fields
+  are set by DEF file directives and describe the characteristics and
+  behavior of a program or library, as well as the initial size of the stack
+  and local heap. The remaining fields specify the locations and sizes of
+  other file elements such as the resident and nonresident names tables and
+  the segment table. (The actual code and data segments are described in the
+  segment table rather than in the new EXE header.)
+
+  A critical field in the new EXE header is the file alignment unit size at
+  offset 32H. This size is expressed as a power of 2; for example, the value
+  9 represents a file unit size of 512 bytes. Each component of an
+  executable file (except for resources) begins at an offset within the file
+  that is a multiple of the alignment unit size, and many of the tables
+  within the file express locations and sizes in multiples of this unit.
+
+  00H ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+      ³ 	  Signature byte 1 `N'           ³
+  01H ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+      ³ 	  Signature byte 2 `E'           ³
+  02H ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+      ³       Linker major version number	 ³
+  03H ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+      ³       Linker minor version number	 ³
+  04H ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+      ³ 	 Offset of entry table		 ³
+      ³  (relative to start of new EXE header)	 ³
+  06H ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+      ³ 	 Length of entry table		 ³
+  08H ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+      ³        32-bit CRC of entire file	 ³
+  0CH ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+      ³ 	      Module flags		 ÃÄÄÄÄÄ
+  0EH ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+      ³ 	Segment number of DGROUP	 ³
+  10H ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+      ³        Initial size of local heap	 ³
+  12H ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+      ³      Initial size of thread 1 stack	 ³
+  14H ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+      ³ Contents of IP register at program entry ³
+  16H ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+      ³  Segment number containing entry point	 ³
+  18H ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+      ³ Contents of SP register at program entry ³
+  1AH ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+      ³ Segment number containing thread 1 stack ³
+  1CH ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+      ³ 	Entries in segment table	 ³
+  1EH ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+      ³    Entries in module reference table	 ³
+  20H ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+      ³    Length of nonresident names table	 ³
+  22H ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´Ä¿
+      ³ 	Offset of segment table 	 ³ ³
+  24H ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´ ³
+      ³ 	Offset of resource table	 ³ ³
+  26H ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´ ³
+      ³      Offset of resident names table	 ³ ÃÄÄÄ
+  28H ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´ ³
+      ³       Offset of module ref. table	 ³ ³
+  2AH ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´ ³
+      ³      Offset of imported names table	 ³ ³
+  2CH ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´ÄÙ
+      ³    Offset of nonresident names table	 ÃÄÄÄÄÄ
+  30H ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+      ³      Number of movable entry points	 ³
+  32H ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+      ³ Size of file alignment unit (power of 2) ³
+  34H ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+      ³     Number of resource table entries	 ³
+  36H ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+      ³ 	Target operating system 	 ÃÄÄÄÄÄ
+  37H ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+      ³ 					 ³
+      ³ 		Reserved		 ³
+      ³ 					 ³
+  40H ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+
+  Figure D-4.  New EXE header, which follows the MS-DOSÄcompatible stub
+  program in an OS/2 executable file.
+
+Segment Table
+
+
+  The segment table describes the size, location within the file, and
+  characteristics of each of the program's code and data segments. This
+  table is read into memory by the OS/2 loader; it remains resident as long
+  as the program or library is in use so that the loader can quickly locate
+  discardable or load-on-demand code and data segments within the file.
+
+  Each entry in the table is 8 bytes long and has the following format:
+
+  Offset     Length    Description
+  ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+  00H	     2	       Offset of beginning of segment within file (expressed
+		       as multiple of file unit size)
+  02H	     2	       Length of segment (0 = 65,536 bytes)
+  04H	     2	       Segment flags
+		       Bit(s)	  Significance
+		       0Ä2	  Segment type
+				  0 = code
+				  1 = data
+		       3	  0 = noniterated data
+				  1 = iterated data
+		       4	  0 = fixed
+				  1 = movable
+		       5	  0 = impure or nonshareable
+				  1 = pure or shareable
+		       6	  0 = load-on-call
+				  1 = preload
+		       7	  0 = execute/read if code, read/write if
+				  data
+				  1 = execute-only if code, read-only if
+				  data
+		       8	  0 = no relocation table
+				  1 = relocation table present
+		       9	  0 = nonconforming
+				  1 = conforming
+		       10Ä11	  Privilege level
+		       12	  0 = nondiscardable
+				  1 = discardable
+		       13	  0 = 16-bit code segment
+				  1 = 32-bit code segment
+		       14	  0 = normal segment
+				  1 = huge segment
+		       15	  Reserved
+  06H	     2	       Minimum allocation size for segment (0 = 65,536
+		       bytes)
+  ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+  When other tables refer to segments, they use a one-based number that
+  corresponds to an entry in the segment table.
+
+Resource Table
+
+  The resource table is used in Presentation Manager applications to specify
+  the size, location, and type of resources at the end of the file. The
+  table starts with a 16-bit resource shift count: a power of 2 which
+  defines the resource unit size. (Resources can use a different unit size
+  than the one specified in the new EXE header for all other elements of the
+  file.)
+
+  The resource shift count is followed by two or more resource type headers,
+  each header followed by resource entries that define the location, size,
+  and characteristics of the associated resources. The end of the main
+  portion of the resource table is indicated by a resource type header with
+  a zero byte in the resource type position.
+
+  Resource type headers have the following format:
+
+  Offset     Length    Description
+  ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+  00H	     2	       Resource type identifier (if bit 15 = 1) or offset to
+		       type string (if bit 15 = 0)
+  02H	     2	       Number of resources for this type
+  04H	     4	       Reserved
+  ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+  Each resource entry is formatted as follows:
+
+  Offset     Length    Description
+  ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+  00H	     2	       Offset of resource within file (as multiple of
+		       resource
+		       unit size)
+  02H	     2	       Length of resource (as multiple of resource unit
+		       size)
+  04H	     2	       Resource flags
+		       Bit(s)	  Significance
+		       0Ä3	  Reserved
+		       4	  0 = fixed
+				  1 = movable
+		       5	  0 = impure or nonshareable
+				  1 = pure or shareable
+		       6	  0 = load-on-call
+				  1 = preload
+		       7Ä11	  Reserved
+		       12Ä15	  Discard priority
+  06H	     2	       Resource number (if bit 15 = 1) or offset to name
+		       string if bit 15 = 0)
+  08H	     4	       Reserved
+  ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+  When resources and their types are identified with names rather than
+  numbers, the names are stored as a series of counted strings at the end of
+  the resource table (after the zero byte indicating that there are no more
+  resource type headers). The offsets to a name or type string in a resource
+  type header or resource entry are relative to the beginning of the
+  resource table itself. The end of the block of strings is indicated by a
+  single zero byte.
+
+Resident Names Table
+
+  The resident names table lists all the entry points in the program or
+  dynlink library (defined with EXPORTS statements in the DEF file) that
+  were not assigned ordinal numbers. Each entry in the table is a counted
+  string followed by a one-based index to the entry table. The end of the
+  resident names table is indicated by an entry consisting of a single zero
+  byte.
+
+  The first entry in the resident names table is the module name and has an
+  entry table index of zero.
+
+Module Reference Table
+
+  The module reference table consists of a series of word-size (16-bit)
+  entries. Each entry is the offset of a module name in the imported names
+  table. The number of entries in the module reference tableÄÄthat is, the
+  total number of modules from which functions are importedÄÄis found at
+  offset 1EH in the new EXE header.
+
+Imported Names Table
+
+  Each entry in the imported names table is a counted string that names an
+  imported function or a module that contains imported functions. Imported
+  functions are dynamically linked at load time.
+
+  The offset of the beginning of each module name is given by the
+  corresponding word in the module reference table. The offsets of function
+  names are found within relocation records.
+
+Entry Table
+
+  The entry table defines the segment, offset, and type of each entry point
+  within the EXE file. The entry points are bundled together by segment, the
+  number of bundles in the entry table varying from one bundle to many.
+
+  Each bundle begins with two bytes. The first byte contains the number of
+  entry point records in the bundle; the second byte contains FFH if the
+  segment is movable or the segment number if the segment is fixed.
+
+  When a bundle describes a movable segment (the usual case in an OS/2
+  application), the remainder of the bundle is one or more 6-byte entries in
+  the following format:
+
+  Offset     Length    Description
+  ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+  00H	     1	       Entry point flags
+		       Bit(s)	  Significance
+		       0	  0 = entry point not exported
+				  1 = entry point exported
+		       1	  0 = entry point uses instance data
+				  1 = entry point uses single data
+		       2	  Reserved
+		       3Ä7	  Number of stack parameter words
+  01H	     2	       Int 3FH instruction (CDH 3FH)
+  03H	     1	       Segment number of entry point
+  04H	     2	       Offset of entry point within segment
+  ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+  The entries in bundles for fixed segments are 3 bytes long and have the
+  following format:
+
+  Offset     Length    Description
+  ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+  00H	     1	       Entry point flags (See above)
+  01H	     2	       Offset of entry point within segment
+  ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+  When the loader must locate an entry point by its ordinal number, it first
+  scans all the bundles in the entry table until it finds one with the
+  appropriate segment number. It then multiplies the ordinal number by the
+  appropriate size (3 or 6) and uses the result as an index into the bundle.
+
+Nonresident Names Table
+
+  The nonresident names table lists all the entry points in the program or
+  dynlink library (defined with EXPORTS statements in the DEF file) that
+  were assigned explicit ordinal numbers. Each entry in the table is a
+  counted string followed by a one-based index to the entry table. The end
+  of the table is indicated by an entry consisting of a single zero byte.
+
+  The first entry in the nonresident names table is either the description
+  string specified in the DEF file or the filename if the DEF file contains
+  no description string; the first entry has an entry table index of zero.
+
+Code and Data Segments
+
+  The beginning of each code segment and data segment is aligned within the
+  file as specified by the field at offset 32H in the new EXE header. A
+  segment may be iterated data or noniterated data, as indicated by the
+  field at offset 04H in the corresponding entry in the segment table.
+
+  Iterated segments take the following form:
+
+  Offset     Length    Description
+  ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+  00H	     2	       Number of iterations
+  02H	     2	       Bytes per iteration (n)
+  04H	     n	       Actual data for each iteration
+  ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+  The size of a noniterated segment is specified by the field at offset 02H
+  in the corresponding segment table entry. If the segment table indicates
+  that a segment has relocation information, the segment's code or data is
+  followed immediately by a 16-bit value for the number of relocation items
+  and then by one or more 8-byte entries for each relocation item. The
+  format for this 8-byte entry depends on the type of relocation item it
+  representsÄÄthe three types found in normal applications are internal
+  references, imported ordinals, and imported names.
+
+  The format for an internal reference relocation entry, that is, a
+  reference to another segment in the same executable file, has the
+  following form:
+
+  Offset     Length    Description
+  ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+  00H	     1	       Type of relocation
+		       0 = 8-bit offset
+		       2 = 16-bit segment
+		       3 = 32-bit far pointer
+		       5 = 16-bit offset
+		       11 = 48-bit far pointer
+		       13 = 32-bit offset
+  01H	     1	       0 or 4 (indicates internal reference)
+  02H	     2	       Offset of relocation item within segment
+  04H	     1	       FFH if movable segment or number of fixed segment
+  05H	     1	       Reserved (0)
+  06H	     2	       Ordinal of entry point if segment movable, otherwise
+		       offset of entry point within its segment
+  ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+  The format for an imported ordinal relocation entry, that is, a reference
+  to an entry point in another module which is being imported by ordinal
+  number, has the following form:
+
+  Offset     Length    Description
+  ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+  00H	     1	       Type of relocation (See above)
+  01H	     1	       1 or 5 (indicates imported ordinal)
+  02H	     2	       Offset of relocation item within segment
+  04H	     2	       One-based index to module reference table
+  06H	     2	       Function ordinal number
+  ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+  The format for an imported name relocation entry, that is, a reference to
+  an entry point in another module which is being imported by name, has the
+  following form:
+
+  Offset     Length    Description
+  ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+  00H	     1	       Type of relocation (See above)
+  01H	     1	       2 or 6 (indicates imported name)
+  02H	     2	       Offset of relocation item within segment
+  04H	     2	       One-based index to module reference table
+  06H	     2	       Offset to name of imported function in imported names
+		       table
+  ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+  If bit 2 of the byte at offset 01H in a relocation entry is set, the
+  address or value of the external reference is to be added to the contents
+  of the address in the target segment. Otherwise, the address in the target
+  segment contains the offset of the next location in the target segment
+  that requires the same relocation; in other words, all the locations that
+  should be replaced with the same address or value are chained together.
+  The end of the chain is indicated by a -1.
+
+Resources
+
+  Resources are static data blocks such as icons, cursors, menus, and
+  bitmaps that are bound into the executable file for a Presentation Manager
+  application with the Resource Compiler (RC.EXE). Each resource has a name
+  and a type, which can be represented either as a binary 16-bit value or as
+  an ASCII string. The combination of the name and type is unique for each
+  resource in a particular executable file.
+
+  A Kernel application can (but seldom does) contain resources. It can load
+  and obtain a selector for a specific resource with the API function
+  DosGetResource.
+
+
+The NEWEXE.H Header File
+
+  The C header file NEWEXE.H (Figure D-5 on the following pages) defines the
+  load module and is the ultimate recourse when you need information about
+  the format. Using the #include directive, you can include this header in C
+  programs that must access EXE or DLL files.
+
+  ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+  /*
+   *	  NEWEXE.H (C) Copyright Microsoft Corp 1984-1987
+   *
+   *	  Data structure definitions for the OS/2 & Windows
+   *	  executable file format.
+   */
+
+  #define EMAGIC	  0x5A4D	  /* Old magic number */
+  #define ENEWEXE	  sizeof(struct exe_hdr)
+					  /* Value of E_LFARLC for new .EXEs */
+  #define ENEWHDR	  0x003C	  /* Offset in old hdr. of ptr. to new */
+  #define ERESWDS	  0x0010	  /* No. of reserved words (OLD) */
+  #define ERES1WDS	  0x0004	  /* No. of reserved words in e_res */
+  #define ERES2WDS	  0x000A	  /* No. of reserved words in e_res2 */
+  #define ECP		  0x0004	  /* Offset in struct of E_CP */
+  #define ECBLP 	  0x0002	  /* Offset in struct of E_CBLP */
+  #define EMINALLOC	  0x000A	  /* Offset in struct of E_MINALLOC */
+
+  struct exe_hdr			  /* DOS 1, 2, 3 .EXE header */
+    {
+      unsigned short	  e_magic;	  /* Magic number */
+      unsigned short	  e_cblp;	  /* Bytes on last page of file */
+      unsigned short	  e_cp; 	  /* Pages in file */
+      unsigned short	  e_crlc;	  /* Relocations */
+      unsigned short	  e_cparhdr;	  /* Size of header in paragraphs */
+      unsigned short	  e_minalloc;	  /* Minimum extra paragraphs needed */
+      unsigned short	  e_maxalloc;	  /* Maximum extra paragraphs needed */
+      unsigned short	  e_ss; 	  /* Initial (relative) SS value */
+      unsigned short	  e_sp; 	  /* Initial SP value */
+      unsigned short	  e_csum;	  /* Checksum */
+      unsigned short	  e_ip; 	  /* Initial IP value */
+      unsigned short	  e_cs; 	  /* Initial (relative) CS value */
+      unsigned short	  e_lfarlc;	  /* File address of relocation table */
+      unsigned short	  e_ovno;	  /* Overlay number */
+      unsigned short	  e_res[ERES1WDS];/* Reserved words */
+      unsigned short	  e_oemid;	  /* OEM identifier (for e_oeminfo) */
+      unsigned short	  e_oeminfo;	  /* OEM information; e_oemid specific */
+      unsigned short	  e_res2[ERES2WDS];/* Reserved words */
+      long		  e_lfanew;	  /* File address of new exe header */
+    };
+
+  #define E_MAGIC(x)	  (x).e_magic
+  #define E_CBLP(x)	  (x).e_cblp
+  #define E_CP(x)	  (x).e_cp
+  #define E_CRLC(x)	  (x).e_crlc
+  #define E_CPARHDR(x)	  (x).e_cparhdr
+  #define E_MINALLOC(x)   (x).e_minalloc
+  #define E_MAXALLOC(x)   (x).e_maxalloc
+  #define E_SS(x)	  (x).e_ss
+  #define E_SP(x)	  (x).e_sp
+  #define E_CSUM(x)	  (x).e_csum
+  #define E_IP(x)	  (x).e_ip
+  #define E_CS(x)	  (x).e_cs
+  #define E_LFARLC(x)	  (x).e_lfarlc
+  #define E_OVNO(x)	  (x).e_ovno
+  #define E_RES(x)	  (x).e_res
+  #define E_OEMID(x)	  (x).e_oemid
+  #define E_OEMINFO(x)	  (x).e_oeminfo
+  #define E_RES2(x)	  (x).e_res2
+  #define E_LFANEW(x)	  (x).e_lfanew
+
+  #define NEMAGIC	  0x454E	  /* New magic number */
+  #define NERESBYTES	  9		  /* Nine bytes reserved (now) */
+  #define NECRC 	  8		  /* Offset into new header of NE_CRC */
+
+  struct new_exe			  /* New .EXE header */
+    {
+      unsigned short	  ne_magic;	  /* Magic number NE_MAGIC */
+      unsigned char	  ne_ver;	  /* Version number */
+      unsigned char	  ne_rev;	  /* Revision number */
+      unsigned short	  ne_enttab;	  /* Offset of Entry Table */
+      unsigned short	  ne_cbenttab;	  /* Number of bytes in Entry Table */
+      long		  ne_crc;	  /* Checksum of whole file */
+      unsigned short	  ne_flags;	  /* Flag word */
+      unsigned short	  ne_autodata;	  /* Automatic data segment number */
+      unsigned short	  ne_heap;	  /* Initial heap allocation */
+      unsigned short	  ne_stack;	  /* Initial stack allocation */
+      long		  ne_csip;	  /* Initial CS:IP setting */
+      long		  ne_sssp;	  /* Initial SS:SP setting */
+      unsigned short	  ne_cseg;	  /* Count of file segments */
+      unsigned short	  ne_cmod;	  /* Entries in Module Reference Table */
+      unsigned short	  ne_cbnrestab;   /* Size of non-resident name table */
+      unsigned short	  ne_segtab;	  /* Offset of Segment Table */
+      unsigned short	  ne_rsrctab;	  /* Offset of Resource Table */
+      unsigned short	  ne_restab;	  /* Offset of resident name table */
+      unsigned short	  ne_modtab;	  /* Offset of Module Reference Table */
+      unsigned short	  ne_imptab;	  /* Offset of Imported Names Table */
+      long		  ne_nrestab;	  /* Offset of Non-resident Names Table */
+      unsigned short	  ne_cmovent;	  /* Count of movable entries */
+      unsigned short	  ne_align;	  /* Segment alignment shift count */
+      unsigned short	  ne_cres;	  /* Count of resource entries */
+      unsigned char	  ne_exetyp;	  /* Target operating system */
+      char		  ne_res[NERESBYTES];
+					  /* Pad structure to 64 bytes */
+    };
+
+  #define NE_MAGIC(x)	  (x).ne_magic
+  #define NE_VER(x)	  (x).ne_ver
+  #define NE_REV(x)	  (x).ne_rev
+  #define NE_ENTTAB(x)	  (x).ne_enttab
+  #define NE_CBENTTAB(x)  (x).ne_cbenttab
+  #define NE_CRC(x)	  (x).ne_crc
+  #define NE_FLAGS(x)	  (x).ne_flags
+  #define NE_AUTODATA(x)  (x).ne_autodata
+  #define NE_HEAP(x)	  (x).ne_heap
+  #define NE_STACK(x)	  (x).ne_stack
+  #define NE_CSIP(x)	  (x).ne_csip
+  #define NE_SSSP(x)	  (x).ne_sssp
+  #define NE_CSEG(x)	  (x).ne_cseg
+  #define NE_CMOD(x)	  (x).ne_cmod
+  #define NE_CBNRESTAB(x) (x).ne_cbnrestab
+  #define NE_SEGTAB(x)	  (x).ne_segtab
+  #define NE_RSRCTAB(x)   (x).ne_rsrctab
+  #define NE_RESTAB(x)	  (x).ne_restab
+  #define NE_MODTAB(x)	  (x).ne_modtab
+  #define NE_IMPTAB(x)	  (x).ne_imptab
+  #define NE_NRESTAB(x)   (x).ne_nrestab
+  #define NE_CMOVENT(x)   (x).ne_cmovent
+  #define NE_ALIGN(x)	  (x).ne_align
+  #define NE_CRES(x)	  (x).ne_cres
+  #define NE_RES(x)	  (x).ne_res
+  #define NE_EXETYP(x)	  (x).ne_exetyp
+
+  #define NE_USAGE(x)	  (WORD)*((WORD *)(x)+1)
+  #define NE_PNEXTEXE(x)  (WORD)(x).ne_cbenttab
+  #define NE_ONEWEXE(x)   (WORD)(x).ne_crc
+  #define NE_PFILEINFO(x) (WORD)((DWORD)(x).ne_crc >> 16)
+
+
+  /*
+   *  Target operating systems
+   */
+
+  #define NE_UNKNOWN	  0x0		  /* Unknown (any "new-format" OS) */
+  #define NE_OS2	  0x1		  /* Microsoft/IBM OS/2 (default)  */
+  #define NE_WINDOWS	  0x2		  /* Microsoft Windows */
+  #define NE_DOS4	  0x3		  /* Microsoft MS-DOS 4.x */
+  /*
+   *  Format of NE_FLAGS(x):
+   *
+   *  p 				  Not-a-process
+   *   x				  Unused
+   *	e				  Errors in image
+   *	 x				  Unused
+   *	  b				  Bound as family app
+   *	   ttt				  Application type
+   *	      f 			  Floating-point instructions
+   *	       3			  386 instructions
+   *		2			  286 instructions
+   *		 0			  8086 instructions
+   *		  P			  Protected mode only
+   *		   p			  Per-process library initialization
+   *		    i			  Instance data
+   *		     s			  Solo data
+   */
+  #define NENOTP	  0x8000	  /* Not a process */
+  #define NEIERR	  0x2000	  /* Errors in image */
+  #define NEBOUND	  0x0800	  /* Bound as family app */
+  #define NEAPPTYP	  0x0700	  /* Application type mask */
+  #define NENOTWINCOMPAT  0x0100	  /* Not compatible with P.M. Windowing */
+  #define NEWINCOMPAT	  0x0200	  /* Compatible with P.M. Windowing */
+  #define NEWINAPI	  0x0300	  /* Uses P.M. Windowing API */
+  #define NEFLTP	  0x0080	  /* Floating-point instructions */
+  #define NEI386	  0x0040	  /* 386 instructions */
+  #define NEI286	  0x0020	  /* 286 instructions */
+  #define NEI086	  0x0010	  /* 8086 instructions */
+  #define NEPROT	  0x0008	  /* Runs in protected mode only */
+  #define NEPPLI	  0x0004	  /* Per-Process Library Initialization */
+  #define NEINST	  0x0002	  /* Instance data */
+  #define NESOLO	  0x0001	  /* Solo data */
+
+
+  struct new_seg			  /* New .EXE segment table entry */
+    {
+      unsigned short	  ns_sector;	  /* File sector of start of segment */
+      unsigned short	  ns_cbseg;	  /* Number of bytes in file */
+      unsigned short	  ns_flags;	  /* Attribute flags */
+      unsigned short	  ns_minalloc;	  /* Minimum allocation in bytes */
+    };
+  #define NS_SECTOR(x)	  (x).ns_sector
+  #define NS_CBSEG(x)	  (x).ns_cbseg
+  #define NS_FLAGS(x)	  (x).ns_flags
+  #define NS_MINALLOC(x)  (x).ns_minalloc
+
+  /*
+   *
+   *  x 			  Unused
+   *   h			  Huge segment
+   *	c			  32-bit code segment
+   *	 d			  Discardable segment
+   *	  DD			  I/O privilege level (286 DPL bits)
+   *	    c			  Conforming segment
+   *	     r			  Segment has relocations
+   *	      e 		  Execute/read only
+   *	       p		  Preload segment
+   *		P		  Pure segment
+   *		 m		  Movable segment
+   *		  i		  Iterated segment
+   *		   ttt		  Segment type
+   */
+  #define NSTYPE	  0x0007	  /* Segment type mask */
+  #define NSCODE	  0x0000	  /* Code segment */
+  #define NSDATA	  0x0001	  /* Data segment */
+  #define NSITER	  0x0008	  /* Iterated segment flag */
+  #define NSMOVE	  0x0010	  /* Movable segment flag */
+  #define NSSHARED	  0x0020	  /* Shared segment flag */
+  #define NSPRELOAD	  0x0040	  /* Preload segment flag */
+  #define NSEXRD	  0x0080	  /* Execute-only (code segment), or
+					   *  read-only (data segment)
+					   */
+  #define NSRELOC	  0x0100	  /* Segment has relocations */
+  #define NSCONFORM	  0x0200	  /* Conforming segment */
+  #define NSDPL 	  0x0C00	  /* I/O privilege level (286 DPL bits) */
+  #define SHIFTDPL	  10		  /* Left shift count for SEGDPL field */
+  #define NSDISCARD	  0x1000	  /* Segment is discardable */
+  #define NS32BIT	  0x2000	  /* 32-bit code segment */
+  #define NSHUGE	  0x4000	  /* Huge memory segment, length of
+					   * segment and minimum allocation
+					   * size are in segment sector units
+					   */
+  #define NSPURE	  NSSHARED	  /* For compatibility */
+
+  #define NSALIGN 9	  /* Segment data aligned on 512 byte boundaries */
+
+  #define NSLOADED    0x0004	  /* ns_sector field contains memory addr */
+  struct new_segdata			  /* Segment data */
+    {
+      union
+	{
+	  struct
+	    {
+	      unsigned short	  ns_niter;	  /* number of iterations */
+	      unsigned short	  ns_nbytes;	  /* number of bytes */
+	      char		  ns_iterdata;	  /* iterated data bytes */
+	    } ns_iter;
+	  struct
+	    {
+	      char		  ns_data;	  /* data bytes */
+	    } ns_noniter;
+	} ns_union;
+    };
+
+  struct new_rlcinfo			  /* Relocation info */
+    {
+      unsigned short	  nr_nreloc;	  /* number of relocation items that */
+    };					  /* follow */
+
+  struct new_rlc			  /* Relocation item */
+    {
+      char		  nr_stype;	  /* Source type */
+      char		  nr_flags;	  /* Flag byte */
+      unsigned short	  nr_soff;	  /* Source offset */
+      union
+	{
+	  struct
+	    {
+	      char	  nr_segno;	  /* Target segment number */
+	      char	  nr_res;	  /* Reserved */
+	      unsigned short nr_entry;	  /* Target Entry Table offset */
+	    }		  nr_intref;	  /* Internal reference */
+	  struct
+	    {
+	      unsigned short nr_mod;	  /* Index into Module Reference Table */
+	      unsigned short nr_proc;	  /* Procedure ordinal or name offset */
+	    }		  nr_import;	  /* Import */
+	  struct
+	    {
+	      unsigned short nr_ostype;   /* OSFIXUP type */
+	      unsigned short nr_osres;	  /* reserved */
+	    }		  nr_osfix;	  /* Operating system fixup */
+	}		  nr_union;	  /* Union */
+    };
+  #define NR_STYPE(x)	  (x).nr_stype
+  #define NR_FLAGS(x)	  (x).nr_flags
+  #define NR_SOFF(x)	  (x).nr_soff
+  #define NR_SEGNO(x)	  (x).nr_union.nr_intref.nr_segno
+  #define NR_RES(x)	  (x).nr_union.nr_intref.nr_res
+  #define NR_ENTRY(x)	  (x).nr_union.nr_intref.nr_entry
+  #define NR_MOD(x)	  (x).nr_union.nr_import.nr_mod
+  #define NR_PROC(x)	  (x).nr_union.nr_import.nr_proc
+  #define NR_OSTYPE(x)	  (x).nr_union.nr_osfix.nr_ostype
+  #define NR_OSRES(x)	  (x).nr_union.nr_osfix.nr_osres
+
+  /*
+   *  Format of NR_STYPE(x):
+   *
+   *  xxxxx				  Unused
+   *	   sss				  Source type
+   */
+  #define NRSTYP	  0x0f		  /* Source type mask */
+  #define NRSBYT	  0x00		  /* lo byte */
+  #define NRSSEG	  0x02		  /* 16-bit segment */
+  #define NRSPTR	  0x03		  /* 32-bit pointer */
+  #define NRSOFF	  0x05		  /* 16-bit offset */
+  #define NRSPTR48	  0x0B		  /* 48-bit pointer */
+  #define NRSOFF32	  0x0D		  /* 32-bit offset */
+
+  /*
+   *  Format of NR_FLAGS(x):
+   *
+   *  xxxxx				  Unused
+   *	   a				  Additive fixup
+   *	    rr				  Reference type
+   */
+  #define NRADD 	  0x04		  /* Additive fixup */
+  #define NRRTYP	  0x03		  /* Reference type mask */
+  #define NRRINT	  0x00		  /* Internal reference */
+  #define NRRORD	  0x01		  /* Import by ordinal */
+  #define NRRNAM	  0x02		  /* Import by name */
+  #define NRROSF	  0x03		  /* Operating system fixup */
+
+
+  /* Resource type or name string */
+  struct rsrc_string
+      {
+      char rs_len;	      /* number of bytes in string */
+      char rs_string[ 1 ];    /* text of string */
+      };
+  #define RS_LEN( x )	 (x).rs_len
+  #define RS_STRING( x ) (x).rs_string
+
+  /* Resource type information block */
+  struct rsrc_typeinfo
+      {
+      unsigned short rt_id;
+      unsigned short rt_nres;
+      long rt_proc;
+      };
+
+  #define RT_ID( x )   (x).rt_id
+  #define RT_NRES( x ) (x).rt_nres
+  #define RT_PROC( x ) (x).rt_proc
+
+  /* Resource name information block */
+  struct rsrc_nameinfo
+      {
+      /* The following two fields must be shifted left by the value of	*/
+      /* the rs_align field to compute their actual value. This allows */
+      /* resources to be larger than 64k, but they do not need to be	*/
+      /* aligned on 512 byte boundaries, the way segments are.		 */
+      unsigned short rn_offset;   /* file offset to resource data */
+      unsigned short rn_length;   /* length of resource data */
+      unsigned short rn_flags;	  /* resource flags */
+      unsigned short rn_id;	  /* resource name id */
+      unsigned short rn_handle;   /* If loaded, then global handle */
+      unsigned short rn_usage;	  /* Initially zero. Number of times */
+				  /* the handle for this resource has */
+				  /* been given out */
+      };
+
+  #define RN_OFFSET( x ) (x).rn_offset
+  #define RN_LENGTH( x ) (x).rn_length
+  #define RN_FLAGS( x )  (x).rn_flags
+  #define RN_ID( x )	 (x).rn_id
+  #define RN_HANDLE( x ) (x).rn_handle
+  #define RN_USAGE( x )  (x).rn_usage
+
+  #define RSORDID     0x8000	  /* if high bit of ID set then integer id */
+				  /* otherwise ID is offset of string from
+				     the beginning of the resource table */
+				  /* Ideally these are the same as the */
+				  /* corresponding segment flags */
+  #define RNMOVE      0x0010	  /* Moveable resource */
+  #define RNPURE      0x0020	  /* Pure (read-only) resource */
+  #define RNPRELOAD   0x0040	  /* Preloaded resource */
+  #define RNDISCARD   0xF000	  /* Discard priority level for resource */
+
+  /* Resource table */
+  struct new_rsrc
+      {
+      unsigned short rs_align;	  /* alignment shift count for resources */
+      struct rsrc_typeinfo rs_typeinfo;
+      };
+
+  #define RS_ALIGN( x ) (x).rs_align
+  ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+  Figure D-5.  The NEWEXE.H C header file, which defines the structure of
+  the tables in OS/2 load modules.

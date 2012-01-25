@@ -1,0 +1,24 @@
+QLINK To Do List
+----------------
+
+* Clean up EXE_WIN .MAP file
+* Write out EXE_WIN header and body
+* Test COMDAT support
+* Finish NBKPAT code
+* Clean up PERCLS_PSYM*
+* Test IWF_USEDIF with absolute segment
+* Review all MS linker documentation to catch
+  odd cases
+* Test SEGMENTS code -- in particular, see if it generates
+  a new logical segment
+
+
+Problems
+--------
+* Why does WINSWAT automatically allocate 10KB of stack but
+  SETEWV doesn't?
+* Why does WINSWAT seg 2 (FAR_DATA) have a file size of zero?
+
+
+
+

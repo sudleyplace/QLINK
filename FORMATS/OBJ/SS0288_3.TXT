@@ -1,0 +1,809 @@
+88H LZEXT--LAZY EXTERN RECORD (COMMENT CLASS A9)
+================================================
+
+Description
+-----------
+
+This record marks a set of external names as "lazy," and for every
+lazy extern, the record associates another external name to use as the
+default resolution.
+
+History
+-------
+
+This comment class and subtype is a Microsoft extension added for C
+7.0, but was not implemented in the C 7.0 linker.
+
+Record Format
+-------------
+
+The subrecord format is:
+
+   1      1 or 2           1 or 2
+   A9     Lazy EXTDEF      Default Resolution
+          Index            EXTDEF Index
+          <---------------repeated------------->
+
+The Lazy EXTDEF Index field is the 1- or 2-byte index to the EXTDEF of
+the extern that is lazy.
+
+The Default Resolution EXTDEF Index field is the 1- or 2-byte index to
+the EXTDEF of the extern that will be used to resolve the extern if no
+"stronger" link is found to resolve it.
+  
+  NOTES
+  
+  There are two ways to cancel the "laziness" of a lazy extern; both
+  result in the extern becoming a "strong" extern (the same as an
+  EXTDEF.) They are:
+  
+    - If a PUBDEF for the lazy extern is linked in
+    - If an EXTDEF for the lazy extern is found in another module
+      (including libraries)
+  
+  If a lazy extern becomes strong, it must be resolved with a matching
+  PUBDEF, just like a regular EXTDEF. If a lazy extern has not become
+  strong by the end of the linking process, then the default
+  resolution is used.
+  
+  If two weak externs for the same symbol in different modules have
+  differing default resolutions, LINK will emit a warning.
+  
+  Unlike weak externs, lazy externs do query libraries for resolution;
+  if an extern is still lazy when libraries are searched, it stays
+  lazy and gets the default resolution.
+  
+88H PHARLAP FORMAT RECORD (COMMENT CLASS AA)
+============================================
+
+Description
+-----------
+
+The OMF extension designed by PharLap is called "Easy OMF-386."
+Changes to the affected record types are described in this section.
+
+Most modifications involve only a substitution of 32-bit (4-byte)
+fields for what were formerly 16-bit (2-byte) fields. In the two cases
+where the changes involve more than just a field size (in the SEGDEF
+and FIXUPP records), the information is mentioned in this section, but
+complete details are given in the sections describing the specific
+records.
+
+History
+-------
+
+This format is described as "obsolete" in the expectation that
+negotiations between Microsoft and PharLap will result in convergence
+to the new "standard." However, its obsolescence needs to be verified.
+When the new standard is agreed upon, Microsoft encourages you to
+adopt it.
+
+Record Format
+-------------
+
+The format of the comment's subrecord is:
+
+   AA     "80386"
+     
+     
+  NOTES
+  
+  The AA comment record should come immediately after the sole THEADR
+  record. Presence of the comment record indicates that the following
+  other record types have fields that are expanded from 16-bit to 32-
+  bit values:
+  
+     SEGDEF Offset field and Segment Length field
+
+     PUBDEF Public Offset field
+
+     LEDATA Enumerated Data Offset field
+
+     LIDATA Iterated Data Offset field (note that the Repeat Count
+            field is still 16 bits)
+
+     FIXUPP Target Displacement field in an explicit FIXUP subrecord
+
+     BLKDEF Return Address Offset field
+
+     LINNUM Line Number Offset field
+ 
+     MODEND Target Displacement field
+
+  FIXUPP records have the added LOCATION values of 5 and 6, which
+  conflict with the Microsoft 32-bit extensions to this field. See the
+  FIXUPP section of this document for details.
+  
+  SEGDEF records have added alignment values (for 4-byte alignment and
+  4K alignment) and an added optional byte at the end that contains
+  the Use16/Use32 bit flag and access attributes (read/write/execute)
+  for the segment. The alignment values are the same as Microsoft's 32-
+  bit extensions to the field, but the attributes stored in the added
+  byte conflict with Microsoft's way of specifying those attributes.
+  See the SEGDEF sectionof this document for details.
+  
+  
+8AH OR 8BH MODEND--MODULE END RECORD
+====================================
+
+Description
+-----------
+
+The MODEND record denotes the end of an object module. It also
+indicates whether the object module contains the main routine in a
+program, and it can optionally contain a reference to a program's
+entry point.
+
+History
+-------
+
+Record type 8BH is new for LINK386; it has a Target Displacement field
+of 32 bits rather than 16 bytes.
+
+An IBM extension to this record type (initial values for segment
+registers) was proposed for LINK386 but was never implemented.
+
+Record Format
+-------------
+   
+  1  2       1      1         1 or 2  1 or 2   2 or 4     1
+ 8A  Record  Module End Data  Frame   Target   Target     Checksum
+  or Length  Type             Datum   Datum    Displace-  
+ 8B                                            ment
+                    <-Start Address subfield, conditional->
+
+where:
+   
+   Module Type Field
+   
+   The Module Type byte is bit significant; its layout is
+   
+      MATTR         Segment                                      
+      Main  Start   Bit      0          0       0       0       X
+      <--2 bits-->                                  
+
+  where:
+
+      MATTR           Is a 2-bit field.
+                      
+      Main            Is set if the module is a main program
+                      module.
+                      
+      Start           Is set if the module contains a start
+                      address; if this bit is set, the field
+                      starting with the End Data byte is present
+                      and specifies the start address.
+                      
+      Segment Bit     Is reserved by IBM. Only 0 is supported by
+                      MS-DOS and OS/2.
+                      
+      X               Is set if the Start Address subfield
+                      contains a relocatable address reference
+                      that LINK must fix up. (The Intel
+                      specification allows this bit to be 0, to
+                      indicate that the start address is an
+                      absolute physical address that is stored as
+                      a 16-bit frame number and 16-bit offset,
+                      but this capability is not supported by
+                      LINK.) This bit should always be set;
+                      however, the value will be ignored.
+                      
+      Start Address   The Start Address subfield is present only
+                      if the Start bit in the Module Type byte is
+                      set. Its format is identical to the Fix
+                      Data, Frame Datum, Target Datum, and Target
+                      Displacement fields in a FIXUP subrecord of
+                      a FIXUPP record. Bit 2 of the End Data
+                      field, which corresponds to the P bit in a
+                      Fix Data field, must be 0. The Target
+                      Displacement field (if present) is a 4-byte
+                      field if the record type is 8BH and a 2-
+                      byte field otherwise. This value provides
+                      the initial contents of CS:(E)IP.
+                      
+                      If overlays are used, the start address
+                      must be given in the MODEND record of the
+                      root module.
+                      
+  
+  NOTES
+  
+  A MODEND record can appear only as the last record in an object
+  module.
+  
+  It is assumed that the Link Pass Separator comment record (COMENT
+  A2, subtype 01) will not be present in a module whose MODEND record
+  contains a program starting address. If there are overlays, LINK
+  needs to see the starting address on Pass 1 to define the symbol
+  $$MAIN.
+
+Examples
+--------
+
+Consider the MODEND record of a simple HELLO.ASM program:
+
+       0  1   2  3   4  5   6  7   8  9 A B C D E F 
+  0000 8A 07  00 C1  00 01  01 00  00                AC.....
+
+Byte 00H contains 8AH, indicating a MODEND record.
+
+Bytes 01-02H contain 0007H, the length of the remainder of the record.
+
+Byte 03H contains 0C1H (11000001B). Bit 7 is set to 1, indicating that
+this module is the main module of the program. Bit 6 is set to 1,
+indicating that a Start Address subfield is present. Bit 0 is set to
+1, indicating that the address referenced in the Start Address
+subfield must be fixed up by LINK.
+
+Byte 04H (End Data in the Start Address subfield) contains 00H. As in
+a FIXUPP record, bit 7 indicates that the frame for this fixup is
+specified explicitly, and bits 6 through 4 indicate that a SEGDEF
+index specifies the frame. Bit 3 indicates that the target reference
+is also specified explicitly, and bits 2 through 0 indicate that a
+SEGDEF index also specifies the target. See also "9CH or 9DH FIXUPP--
+Fixup Record" in this document.
+
+Byte 05H (Frame Datum in the Start Address subfield) contains 01H.
+This is a reference to the first SEGDEF record in the module, which in
+this example corresponds to the _TEXT segment. This reference tells
+LINK that the start address lies in the _TEXT segment of the module.
+
+Byte 06H (Target Datum in the Start Address subfield) contains 01H.
+This also is a reference to the first SEGDEF record in the object
+module, which corresponds to the _TEXT segment. LINK uses the
+following Target Displacement field to determine where in the _TEXT
+segment the address lies.
+
+Bytes 07-08H (Target Displacement in the Start Address subfield)
+contain 0000H. This is the offset (in bytes) of the start address.
+
+Byte 09H contains the Checksum field, 0ACH.
+
+
+8CH EXTDEF--EXTERNAL NAMES DEFINITION RECORD
+============================================
+
+Description
+-----------
+
+The EXTDEF record contains a list of symbolic external references--
+that is, references to symbols defined in other object modules. The
+linker resolves external references by matching the symbols declared
+in EXTDEF records with symbols declared in PUBDEF records.
+
+History
+-------
+
+In the Intel specification and older linkers, the Type Index field was
+used as an index into TYPDEF records. This is no longer true; the
+field now encodes CodeView type information (see Appendix 1 for
+details.) LINK ignores the old style TYPDEF.
+
+Record Format
+-------------
+   
+   1      2       1       <String Length>   1 or 2      1
+   8C     Record  String  External          Type Index  Checksum
+          Length  Length  Name String                   
+
+This record provides a list of unresolved references, identified by
+name and with optional associated type information. The external names
+are ordered by occurrence jointly with the COMDEF and LEXTDEF records,
+and referenced by an index in other records (FIXUPP records); the name
+may not be null. Indexes start from 1.
+
+String Length is a 1-byte field containing the length of the name
+field that follows it. LINK restricts the name length to a value
+between 1 and 7FH.
+
+The Type Index field is encoded as an index field and contains
+proprietary CodeView-type information. At this time, the linker does
+not perform any type checking.
+  
+  NOTES
+  
+  For Microsoft compilers, all referenced functions of global scope
+  and all referenced variables explicitly declared "extern" will
+  generate an EXTDEF record.
+  
+  LINK imposes a limit of 1023 external names.
+  
+  Any EXTDEF records in an object module must appear before the FIXUPP
+  records that reference them.
+  
+  Resolution of an external reference is by name match (case
+  sensitive) and symbol type match. The search looks for a matching
+  name in the following sequence:
+    
+   1. Searches PUBDEF and COMDEF records.
+   
+   2.  If linking a segmented executable, searches imported names
+      (IMPDEF).
+   
+   3. If linking a segmented executable and not a DLL, searches for an
+      exported name (EXPDEF) with the same name--a self-imported
+      alias.
+   
+   4. Searches for the symbol name among undefined symbols. If the
+      reference is to a weak extern, the default resolution is used.
+      If the reference is to a strong extern, it's an undefined
+      external, and LINK generates an error.
+  
+  All external references must be resolved at link time (using the
+  above search order). Even though LINK produces an executable file
+  for an unsuccessful link session, an error bit is set in the header
+  that prevents the loader from running the executable.
+
+Examples
+--------
+
+Consider this EXTDEF record generated by the Microsoft C Compiler:
+
+     0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F 
+0000 8C 25 00 0A 5F 5F 61 63 72 74 75 73 65 64 00 05 .%.__acrtused..
+0010 5F 6D 61 69 6E 00 05 5F 70 75 74 73 00 08 5F 5F _main.._puts..__ 
+0020 63 68 6B 73 74 6B 00 A5                         chkstk..                      
+
+Byte 00H contains 8CH, indicating that this is an EXTDEF record.
+
+Bytes 01-02H contain 0025H, the length of the remainder of the record.
+
+Bytes 03-26H contain a list of external references. The first
+reference starts in byte 03H, which contains 0AH, the length of the
+name __acrtused. The name itself follows in bytes 04-0DH. Byte 0EH
+contains 00H, which indicates that the symbol's type is not defined by
+any TYPDEF record in this object module. Bytes 0F-26H contain similar
+references to the external symbols _main, _puts, and __chkstk.
+
+Byte 27H contains the Checksum field, 0A5H.
+
+
+8EH TYPDEF--TYPE DEFINITION RECORD
+==================================
+
+Description
+-----------
+
+The TYPDEF record contains details about the type of data represented
+by a name declared in a PUBDEF or an EXTDEF record. This information
+may be used by a linker to validate references to names, or it may be
+used by a debugger to display data according to type.
+
+Although the original Intel specification allowed for many different
+type specifications, such as scalar, pointer, and mixed data
+structure, LINK used TYPDEF records to declare only communal
+variables. Communal variables represent globally shared memory areas--
+for example, FORTRAN common blocks or uninitialized public variables
+in C.
+
+The size of a communal variable is declared explicitly in the TYPDEF
+record. If a communal variable has different sizes in different object
+modules, LINK uses the largest declared size when it generates an
+executable module.
+
+History
+-------
+
+Starting with Microsoft LINK version 3.5, the COMDEF record should be
+used for declaration of communal variables. However, for
+compatibility, later versions of LINK recognize TYPDEF records as well
+as COMDEF records.
+
+Record Format
+-------------
+   
+   1   2          <variable>     1       <variable>  1
+   8E  Record     Name           0       Leaf        Checksum
+       Length                    (EN)    Descriptor  
+
+The name field of a TYPDEF record is in <count, char> format and is
+always ignored. It is usually a 1-byte field containing a single 0
+byte.
+
+The Eight-Leaf Descriptor field in the original Intel specification
+was a variable-length (and possibly repeated) field that contained as
+many as eight "leaves" that could be used to describe mixed data
+structures. Microsoft uses a stripped-down version of the Eight-Leaf
+Descriptor, of which the first byte, the EN byte, is always set to 0.
+
+The Leaf Descriptor field is a variable-length field that describes
+the type and size of a variable. The two possible variable types are
+NEAR and FAR.
+
+If the field describes a NEAR variable (one that can be referenced as
+an offset within a default data segment), the format of the Leaf
+Descriptor field is:
+
+   1      1           <variable>
+   62H    Variable    Length in Bits
+          Type
+
+The 1-byte field containing 62H signifies a NEAR variable.
+
+The Variable Type field is a 1-byte field that specifies the variable
+type:
+   
+   77H    Array
+   79H    Structure
+   7BH    Scalar
+
+This field must contain one of the three values given above, but the
+specific value is ignored by LINK.
+
+The Length in Bits field is a variable-length field that indicates the
+size of the communal variable. Its format depends on the size it
+represents.
+
+If the first byte of the size is 128 (80H) or less, then the size is
+that value. If the first byte of the size is 81H, then a 2-byte size
+follows. If the first byte of the size is 84H, then a 3-byte size
+follows. If the first byte of the size is 88H, then a 4-byte size
+follows.
+
+If the Leaf Descriptor field describes a FAR variable (one that must
+be referenced with an explicit segment and offset), the format is:
+
+   1      1           <variable>          <variable>
+   61H    Variable    Number of Elements  Element Type Index
+          Type (77H)                      
+
+The 1-byte field containing 61H signifies a FAR variable.
+
+The 1-byte variable type for a FAR communal variable is restricted to
+77H (array). (As with the NEAR Variable Type field, LINK ignores this
+field, but it must have the value 77H.)
+
+The Number of Elements field is a variable-length field that contains
+the number of elements in the array. It has the same format as the
+Length in Bits field in the Leaf Descriptor field for a NEAR variable.
+
+The Element Type Index field is an index field that references a
+previous TYPDEF record. A value of 1 indicates the first TYPDEF record
+in the object module, a value of 2 indicates the second TYPDEF record,
+and so on. The TYPDEF record referenced must describe a NEAR variable.
+This way, the data type and size of the elements in the array can be
+determined.
+
+  NOTE: LINK limits the number of TYPDEF records in an object module
+  to 256.
+
+Examples
+--------
+
+The following three examples of TYPDEF records were generated by
+Microsoft C Compiler version 3.0. (Later versions use COMDEF records.)
+
+The first sample TYPDEF record corresponds to the public declaration:
+
+   int   var;     /* 16-bit integer */
+
+The TYPDEF record is:
+
+        0  1   2  3   4  5  6  7  8  9  A  B   C D  E  F  
+  0000  8E 06  00 00  00 62 7B 10 7F                     .....b{..
+
+Byte 00H contains 8EH, indicating that this is a TYPDEF record.
+
+Bytes 01-02H contain 0006H, the length of the remainder of the record.
+
+Byte 03H (the name field) contains 00H, a null name.
+
+Bytes 04-07H represent the Eight-Leaf Descriptor field. The first byte
+of this field (byte 04H) contains 00H. The remaining bytes (bytes 05-
+07H) represent the Leaf Descriptor field:
+   
+    - Byte 05H contains 62H, indicating that this TYPDEF record
+      describes a NEAR variable.
+
+    - Byte 06H (the Variable Type field) contains 7BH, which describes
+      this variable as scalar.
+
+    - Byte 07H (the Length in Bits field) contains 10H, the size of
+      the variable in bits.
+
+Byte 08H contains the Checksum field, 7FH.
+
+The next example demonstrates how the variable size contained in the
+Length in Bits field of the Leaf Descriptor field is formatted:
+
+   char var2[32768];   /* 32 KB array */
+
+The TYPDEF record is:
+
+     0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F  
+0000 8E 09 00 00 00 62 7B 84 00 00 04 04           .....bc{.....
+
+The Length in Bits field (bytes 07-0AH) starts with a byte containing
+84H, which indicates that the actual size of the variable is
+represented as a 3-byte value (the following three bytes). Bytes 08-
+0AH contain the value 040000H, the size of the 32K array in bits.
+
+This third C statement, because it declares a FAR variable, causes two
+TYPDEF records to be generated:
+
+   char far  var3[10][2][20];    /* 400-element FAR array*/
+
+The two TYPDEF records are:
+
+     0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F 
+0000 8E 06 00 00 62 7B 08 87 8E 09 00 00 00 00 61 77 ....bc{......aw
+0010 81 90 01 01 7E                                  .....|
+
+Bytes 00-08H contain the first TYPDEF record, which defines the data
+type of the elements of the array (NEAR, scalar, 8 bits in size).
+
+Bytes 09-14H contain the second TYPDEF record. The Leaf Descriptor
+field of this record declares that the variable is FAR (byte 0EH
+contains 61H) and an array (byte 0FH, the variable type, contains
+77H).
+
+  NOTE: Because this TYPDEF record describes a FAR variable, bytes 10-
+  12H represent a Number of Elements field. The first byte of the
+  field is 81H, indicating a 2-byte value, so the next two bytes
+  (bytes 11-12H) contain the number of elements in the array, 0190H
+  (400D).
+
+Byte 13H (the Element Type Index field) contains 01H, which is a
+reference to the first TYPDEF record in the object module--in this
+example, the one in bytes 00-08H.
+
+
+90H OR 91H PUBDEF--PUBLIC NAMES DEFINITION RECORD
+=================================================
+
+Description
+-----------
+
+The PUBDEF record contains a list of public names. It makes items
+defined in this object module available to satisfy external references
+in other modules with which it is bound or linked.
+
+The symbols are also available for export if so indicated in an EXPDEF
+comment record.
+
+History
+-------
+
+Record type 91H is new for LINK386; it has a Public Offset field of 32
+bits rather than 16 bits.
+
+Record Format
+-------------
+   
+1   2	   1 or 2 1 or 2   2	  1	  <String     2 or 4  1 or 2 1
+					   Length>
+--------------------------------------------------------------------------
+90  Record Base   Base     Base   String  Public      Public  Type  Check
+or  Length Group  Segment  Frame  Length  Name String Offset  Index sum
+91			  
+--------------------------------------------------------------------------
+			  <condi <-------------repeated------------------>				
+			   tional>
+
+Base Group, Base Segment, and Base Frame Fields
+-----------------------------------------------
+          
+The Base Group and Base Segment fields are indexes specifying
+previously defined SEGDEF and GRPDEF records. The group index may be
+0, meaning that no group is associated with this PUBDEF record.
+
+The Base Frame field is present only if the Base Segment field is 0,
+but the contents of the Base Frame field are always ignored by LINK.
+
+The segment index is normally nonzero and no Base Frame field is
+present.
+
+According to the Intel specification, if both the segment and group
+indexes are 0, the Base Frame field contains a 16-bit paragraph (when
+viewed as a linear address); this may be used to define public symbols
+that are absolute. Absolute addressing is not fully supported by LINK-
+-it can be used for read-only access to absolute memory locations;
+however, writing to absolute memory locations may not work in current
+linkers. This feature is so rarely used that it should be considered
+unsupported.
+
+Public Name String, Public Offset, and Type Index Fields
+--------------------------------------------------------
+          
+The Public Name String field is in <count, char> form and cannot be
+null. Microsoft LINK restricts the maximum length of a public name to
+255 bytes.
+
+The Public Offset field is a 2- or 4-byte numeric field containing the
+offset of the location referred to by the public name. This offset is
+assumed to lie within the group, segment, or frame specified in the
+Base Group, Base Segment, or Base Frame fields.
+
+The Type Index field is encoded in index format; it contains either
+proprietary CodeView-type information or an old-style TYPDEF index. If
+this index is 0, there is no associated type data. Old-style TYPDEF
+indexes are ignored by LINK. Current linkers perform no type checking.
+
+  NOTES
+  
+  All defined functions and initialized global variables generate
+  PUBDEF records in Microsoft compilers. No PUBDEF record will be
+  generated, however, for instantiated inline functions in C++.
+  
+  Any PUBDEF records in an object module must appear after the GRPDEF
+  and SEGDEF records to which they refer. Because PUBDEF records are
+  not themselves referenced by any other type of object record, they
+  are generally placed near the end of an object module.
+  
+  Record type 90H uses 16-bit encoding of the Public Offset field, but
+  it is zero-extended to 32 bits if applied to Use32 segments.
+
+Examples
+--------
+The following two examples show PUBDEF records created by MASM.
+
+The first example is the record for the statement:
+   
+   PUBLIC    GAMMA
+   
+The PUBDEF record is:
+
+     0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F  
+0000 90 0C 00 00 01 05 47 41 4D 4D 41 02 00 00 F9  .....GAMMA.....
+
+Byte 00H contains 90H, indicating a PUBDEF record.
+
+Bytes 01-02H contain 000CH, the length of the remainder of the record.
+
+Bytes 03-04H represent the Base Group, Base Segment, and Base Frame
+fields. Byte 03H (the group index) contains 0, indicating that no
+group is associated with the name in this PUBDEF record. Byte 04H (the
+segment index) contains 1, a reference to the first SEGDEF record in
+the object module. This is the segment to which the name in this
+PUBDEF record refers.
+
+Bytes 05-0AH represent the Public Name String field. Byte 05H contains
+05H (the length of the name), and bytes 06-0AH contain the name
+itself, GAMMA.
+
+Bytes 0B-0CH contain 0002H, the Public Offset field. The name GAMMA
+thus refers to the location that is offset two bytes from the
+beginning of the segment referenced by the Base Group, Base Segment,
+and Base Frame fields.
+
+Byte 0DH is the Type Index field. The value of the Type Index field is
+0, indicating that no data type is associated with the name GAMMA.
+
+Byte 0EH contains the Checksum field, 0F9H.
+
+
+The next example is the PUBDEF record for the following absolute
+symbol declaration:
+   
+            PUBLIC    ALPHA
+   ALPHA    EQU       1234h
+   
+The PUBDEF record is:
+
+     0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F  
+0000 90 0E 00 00 00 00 00 05 41 4C 50 48 41 34 12 00 ...ALPHA4...
+0010 B1                
+
+Bytes 03-06H (the Base Group, Base Segment, and Base Frame fields)
+contain a group index of 0 (byte 03H) and a segment index of 0 (byte
+04H). Since both the group index and segment index are 0, a frame
+number also appears in the Base Group, Base Segment, and Base Frame
+fields. In this instance, the frame number (bytes 05-06H) also happens
+to be 0.
+
+Bytes 07-0CH (the Public Name String field) contain the name ALPHA,
+preceded by its length.
+
+Bytes 0D-0EH (the Public Offset field) contain 1234H. This is the
+value associated with the symbol ALPHA in the assembler EQU directive.
+If ALPHA is declared in another object module with the declaration
+
+   EXTRN     ALPHA:ABS
+
+any references to ALPHA in that object module are fixed up as absolute
+references to offset 1234H in frame 0. In other words, ALPHA would
+have the value 1234H.
+
+Byte 0FH (the Type Index field) contains 0.
+
+
+94H OR 95H LINNUM--LINE NUMBERS RECORD
+======================================
+
+Description
+-----------
+
+The LINNUM record relates line numbers in source code to addresses in
+object code.
+
+For instantiated inline functions in C 7.0, line numbers will be
+output in LINSYM records with a reference to the function name instead
+of the segment.
+
+History
+-------
+
+Record type 95H is new for LINK386; it has a Line Number Offset field
+of 32 bits rather than 16 bits.
+
+Record Format
+-------------
+   
+   1    2      1 or 2  1 or 2     2          2 or 4       1
+   94   Record Base    Base       Line       Line Number  Checksum
+   or   Length Group   Segment    Number     Offset       
+   95
+                                  <--------repeated------>
+
+Base Group and Base Segment Fields
+----------------------------------
+
+The Base Group and Base Segment fields are indexes specifying
+previously defined GRPDEF and SEGDEF records. The Base Group field is
+ignored, and the Base Segment field must be nonzero.
+
+Although the complete Intel specification allows the Base Group and
+Base Segment fields to refer to a group or to an absolute segment as
+well as to a relocatable segment, Microsoft restricts references in
+this field to relocatable segments.
+
+Line Number and Line Number Offset Fields
+-----------------------------------------
+
+The Line Number field is a 16-bit quantity, in the range 0 through
+7FFF and is, as its name indicates, a line number in the source code.
+The Line Number Offset field is a 2- or 4-byte quantity that gives the
+translated code or data's start byte in the program segment defined by
+the SEGDEF index (4 bytes if the record type is 95H; 2 bytes for type
+94H).
+
+The Line Number and Line Number Offset fields can be repeated, so a
+single LINNUM record can specify multiple line numbers in the same
+segment.
+
+Line Number 0 has a special meaning: it is used for the offset of the
+first byte after the end of the function. This is done so that the
+length of the last line (in bytes) can be determined.
+  
+  NOTES
+  
+  The source file corresponding to a line number group is determined
+  from the THEADR record.
+  
+  Any LINNUM records in an object module must appear after the SEGDEF
+  records to which they refer. Because LINNUM records are not
+  themselves referenced by any other type of object record, they are
+  generally placed near the end of an object module.
+  
+  Also see the INCDEF record of this document, which is used to
+  maintain line numbers after incremental compilation.
+
+Examples
+--------
+
+The following LINNUM record was generated by the Microsoft C Compiler:
+
+     0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F  
+0000 94 0F 00 00 01 02 00 00 00 03 00 08 00 04 00 0F ...........
+0010 00 3C                                           ..
+
+Byte 00H contains 94H, indicating that this is a LINNUM record.
+
+Bytes 01-02H contain 000FH, the length of the remainder of the record.
+
+Bytes 03-04H represent the Base Group and Base Segment fields. Byte
+03H (the Base Group field) contains 00H, as it must. Byte 04H (the
+Base Segment field) contains 01H, indicating that the line numbers in
+this LINNUM record refer to code in the segment defined in the first
+SEGDEF record in this object module.
+
+Bytes 05-06H (the Line Number field) contain 0002H, and bytes 07-08H
+(the Line Number Offset field) contain 0000H. Together, they indicate
+that source-code line number 0002 corresponds to offset 0000H in the
+segment indicated in the Base Group and Base Segment fields.
+
+Similarly, the two pairs of Line Number and Line Number Offset fields
+in bytes 09-10H specify that line number 0003 corresponds to offset
+0008H and that line number 0004 corresponds to offset 000FH.
+
+Byte 11H contains the Checksum field, 3CH.

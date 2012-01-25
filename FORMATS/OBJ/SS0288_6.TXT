@@ -1,0 +1,513 @@
+C4H OR C5H LINSYM--SYMBOL LINE NUMBERS RECORD
+=============================================
+
+Description
+-----------
+
+This record will be used to output line numbers for functions
+specified through COMDAT records. Each LINSYM record is associated
+with a preceding COMDAT record.
+
+History
+-------
+
+This record is a Microsoft extension for C 7.0.
+
+Record Format
+-------------
+   1     2       1      1 or 2  2       2 or 4     1
+   C4    Record  Flags  Public  Line    Line       Checksum
+   or    Length         Name    Number  Number     
+   C5                   Index           Offset     
+                                <---repeated--->   
+
+Flags Field
+-----------
+          
+This field contains one defined bit:
+   
+  01H   Continuation bit. If clear, this COMDAT record establishes a
+        new instance of the COMDAT variable; otherwise, the data is a
+        continuation of the previous COMDAT of the symbol.
+   
+Public Name Index Field
+-----------------------
+
+A regular logical name index, indicating the name of the base of the
+LINSYM record.
+
+Line Number Field
+-----------------
+
+An unsigned number in the range 0 to 65,535.
+
+Line Number Offset Field
+------------------------
+
+The offset relative to the base specified by the symbol name base. The
+size of this field depends on the record type.
+  
+  NOTES
+  
+  Record type C5H is identical to C4H except that the Line Number
+  Offset field is 4 bytes instead of 2.
+  
+  This record is used to output line numbers for functions specified
+  through COMDAT records. Often, the residing segment as well as the
+  relative offsets of such functions is unknown at compile time, in
+  that the linker is the final arbiter of such information. For such
+  cases, the compiler will generate this record to specify the line
+  number/offset pairs relative to a symbolic name.
+  
+  This record will also be used to discard duplicate LINNUM
+  information. If the linker encounters two or more LINSYM records
+  with matching symbolic names (corresponding to multiple COMDAT
+  records with the same name), the linker will keep the one that
+  corresponds to the retained COMDAT.
+  
+  LINSYM records must follow the COMDATs to which they refer. A LINSYM
+  on a given symbol refers to the most recent COMDAT on the same
+  symbol.
+  
+  LINSYMs inherit the "localness" of their COMDATs.
+
+
+C6H ALIAS--ALIAS DEFINITION RECORD
+==================================
+
+Description
+-----------
+
+This record has been introduced to support link-time aliasing, a
+method by which compilers or assemblers may direct the linker to
+substitute all references to one symbol for another.
+
+History
+-------
+
+The record is a Microsoft extension for FORTRAN version 5.1 (LINK
+version 5.13).
+
+Record Format
+-------------
+
+   1   2              <variable>   <variable>         1
+   C6  Record Length  Alias Name   Substitute Name    Checksum
+                      <-----------repeated--------->  
+   
+   Alias Name Field
+   ----------------
+   
+   A regular length-preceded name of the alias symbol.
+   
+   Substitute Name Field
+   ---------------------
+   
+   A regular length-preceded name of the substitute symbol.
+   
+  NOTES
+  
+  This record consists of two symbolic names: the alias symbol and the
+  substitute symbol. The alias symbol behaves very much like a PUBDEF
+  in that it must be unique. If a PUBDEF of an alias symbol is
+  encountered later, the PUBDEF overrides the alias. If another ALIAS
+  record with a different substitute symbol is encountered, a warning
+  is emitted by the linker, and the second substitute symbol is used.
+  
+  When attempting to satisfy an external reference, if an ALIAS record
+  whose alias symbol matches is found, the linker will halt the search
+  for alias symbol definitions and will attempt to satisfy the
+  reference with the substitute symbol.
+  
+  All ALIAS records must appear before the LINK Pass 2 record.
+
+
+C8H OR C9H NBKPAT--NAMED BACKPATCH RECORD
+=========================================
+
+Description
+-----------
+
+The Named Backpatch record is similar to a BAKPAT record, except that
+it refers to a COMDAT record, by logical name index, rather than an
+LIDATA or LEDATA record. NBKPAT records must immediately follow the
+COMDAT/FIXUPP block to which they refer.
+
+History
+-------
+
+This record is a Microsoft extension for C 7.0.
+
+Record Format
+-------------
+   
+   1      2        1          1 or 2  2 or 4   2 or 4  1
+   C8     Record   Location   Public  Offset   Value   Checksum
+   or C9  Length   Type       Name
+                                      <---repeated---> 
+                                
+Location Type Field
+-------------------
+          
+Type of location to be patched; the only valid values are:
+   
+   0    8-bit byte
+   1    16-bit word
+   2    32-bit double word, record type C9H only
+
+Public Name Index Field
+-----------------------
+          
+Regular logical name index of the COMDAT record to be back patched.
+
+Offset and Value Fields
+-----------------------
+   
+These fields are 32 bits for record type C8H, 16 bits for C9H.
+
+The Offset field specifies the location to be patched, as an offset
+into the COMDAT.
+
+The associated Value field is added to the location being patched
+(unsigned addition, ignoring overflow). The Value field is a fixed
+length (16 bits or 32 bits, depending on the record type) to make
+object module processing easier.
+
+
+CAH LLNAMES--LOCAL LOGICAL NAMES DEFINITION RECORD
+==================================================
+
+Description
+-----------
+
+The LLNAMES record is a list of local names that can be referenced by
+subsequent SEGDEF and GRPDEF records in the object module.
+
+The names are ordered by their occurrence, with the names in LNAMES
+records and referenced by index from subsequent records. More than one
+LNAMES and LLNAMES record may appear. The names themselves are used as
+segment, class, group, overlay, COMDAT, and selector names.
+
+History
+-------
+
+This record is a Microsoft extension for C 7.0.
+
+Record Format
+-------------
+   
+   1         2         1         <--String Length--> 1
+   CA        Record    String    Name                Checksum
+             Length    Length    String              
+                       <----------repeated---------> 
+
+Each name appears in <count, char> format, and a null name is valid.
+The character set is ASCII. Names can be up to 254 characters long.
+
+  NOTE: Any LLNAMES records in an object module must appear before the
+  records that refer to them.
+  
+
+APPENDIX 1: CODEVIEW EXTENSIONS
+===============================
+
+Calling the following information "CodeView's OMF" is a misnomer,
+since CodeView actually does very little to extend the OMF. Most
+CodeView information is stored within the confines of the existing
+OMF, except where noted below.
+
+CodeView information is stored on a per-module basis in specially-
+named logical segments. These segments are defined in the usual way
+(SEGDEF records), but LINK handles them specially, and they do not end
+up as segments in the .EXE file. These segment names are reserved:
+
+   Segment Name        Class Name          Combine Type
+   ------------        ----------          ------------
+
+   $$TYPES             DEBTYP              Private
+   $$SYMBOLS           DEBSYM              Private
+
+The segment $$IMPORT should also be considered a reserved name,
+although it is not used anymore. This segment was not part of any
+object files but was emitted by the linker to get the loader to
+automatically do fixups for CodeView information. The linker emitted a
+standard set of imports, not just ones referenced by the program being
+linked. Use of this segment may be revisited in the future.
+
+CodeView-specific data is stored in LEDATA records for the $$TYPES and
+$$SYMBOLS segments, in various proprietary formats. The $$TYPES
+segment contains information on user-defined variable types; $$SYMBOLS
+contains information about nonpublic symbols: stack, local, procedure,
+block start, constant, and register symbols and code labels.
+
+For instantiated functions in C 7.0, symbol information for CodeView
+will be output in COMDAT records that refer to segment $$SYMBOLS and
+have decorated names based on the function names. Type information
+will still go into the $$TYPES segment in LEDATA records.
+
+All OMF records that specify a Type Index field, including EXTDEF,
+PUBDEF, and COMDEF records, use proprietary CodeView values. Since
+many types are common, Type Index values in the range 0 through 511
+(1FFH) are reserved for a set of predefined primitive types. Indexes
+in the range 512 through 32767 (200H-7FFFH) index into the set of type
+definitions in the module's $$TYPES segment, offset by 512. Thus 512
+is the first new type, 513 the second, and so on.
+
+
+APPENDIX 2: MICROSOFT MS-DOS LIBRARY FORMAT
+===========================================
+
+Libraries under MS-DOS are always multiples of 512-byte blocks.
+
+The first record in the library is a header. This first record looks
+very much like any other Microsoft object module format record.
+
+  Library Header Record (<n> bytes)
+  ---------------------------------
+                                                             
+   1     2                    4           2            1       <n - 10>
+   Type  Record Length        Dictionary  Dictionary   Flags   Padding
+                              Offest      Size
+   (F0H)  (Page Size Minus 3)             in Blocks            
+    
+   The first byte of the record identifies the record's type, and the
+   next two bytes specify the number of bytes remaining in the record.
+   Note that this word field is byte-swapped (that is, the low-order
+   byte precedes the high-order byte). The record type for this
+   library header is F0H (240 decimal).
+   
+   The Record Length field specifies the page size within the library.
+   Modules in a library always start at the beginning of a page. Page
+   size is determined by adding three to the value in the Record
+   Length field (thus the header record always occupies exactly one
+   page). Legal values for the page size are given by 2 to the <n>,
+   where <n> is greater than or equal to 4 and less than or equal to
+   15.
+   
+   The four bytes immediately following the Record Length field are a
+   byte-swapped long integer specifying the byte offset within the
+   library of the first byte of the first block of the dictionary.
+   
+   The next two bytes are a byte-swapped word field that specifies the
+   number of blocks in the dictionary. (The MS-DOS Library Manager
+   cannot create a library whose dictionary would require more than
+   251 512-byte pages.)
+   
+   The next byte contains flags describing the library. The current
+   flag definition is:
+   
+     0x01 = case sensitive (applies to both regular and extended
+     dictionaries)
+     
+   All other values are reserved for future use and should be 0.
+   
+   The remaining bytes in the library header record are not
+   significant. This record deviates from the typical Microsoft OMF
+   record in that the last byte is not used as a checksum on the rest
+   of the record.
+
+Immediately following the header is the first object module in the
+library. It, in turn, is succeeded by all other object modules in the
+library. Each module is in Microsoft OMF (that is, it starts with a
+LHEADR record and ends with a MODEND record). Individual modules are
+aligned so as to begin at the beginning of a new page. If, as is
+commonly the case, a module does not occupy a number of bytes that is
+exactly a multiple of the page size, then its last block will be
+padded with as many null bytes as are required to fill it.
+
+Following the last object module in the library is a record that
+serves as a marker between the object modules and the dictionary. It
+also resembles a Microsoft OMF record.
+
+   Library End Record (marks end of objects and beginning of
+   dictionary)
+
+   1           2                 <n>
+   Type (F1H)  Record Length     Padding
+   
+   The record's Type field contains F1H (241 decimal), and its Record
+   Length field is set so that the dictionary begins on a 512-byte
+   boundary. The record contains no further useful information; the
+   remaining bytes are insignificant. As with the library header, the
+   last byte is not a checksum.
+
+Dictionary
+----------
+   
+The remaining blocks in the library compose the dictionary. The number
+of blocks in the dictionary is given in the library header. Note that
+there should always be a prime number of blocks in the dictionary.
+
+The dictionary is a hashed index to the library. Public symbols are
+essentially hashed twice, though in fact, both hash indexes are
+produced simultaneously. The first hash index, the block index, is
+used to determine a block within the dictionary in which to place the
+symbol. The second hash index, the bucket index, is used to choose a
+bucket within the block for the symbol. Blocks always have 37 buckets;
+they are the first 37 bytes of each block. If a bucket is full, it
+contains a nonzero value that points to the text of the symbol. To
+actually find the symbol, take the bucket value, multiply it by two,
+and use the resulting number as a byte offset from the beginning of
+the block.
+
+Collisions (that is, two or more distinct symbols hashing to the same
+block and bucket in the dictionary) are resolved by a technique known
+as linear open addressing. At the same time the hash indexes are
+produced, two hash deltas are also produced. If a symbol collides with
+a symbol already installed in the dictionary, the librarian attempts
+to find an empty bucket for it by adding the bucket delta to the
+bucket index and using the result mod 37 as a new bucket index. If
+this new bucket index points to a bucket that is empty, the librarian
+will install the symbol in that bucket. If the bucket is not empty,
+the delta is applied repeatedly until an empty bucket is found or
+until it is determined that there are no empty buckets on the block.
+If the latter is the case, the block delta is added to the block
+index, and the result mod the number of blocks in the dictionary is
+used as a new block index. With the new block index and the original
+bucket index, the sequence is repeated until an empty bucket on some
+block is found.
+
+The number of blocks and the number of buckets are prime so that no
+matter what values of hash indexes and deltas are produced for a
+symbol, in the worst case, all possible block-bucket combinations will
+be tried. Once a free block-bucket pair has been found for a symbol,
+the pair and information concerning its place of definition must be
+installed. Since a bucket is a single byte pointing into a 512-byte
+block, the bucket can give at best a word offset within that block.
+Thus, symbol entries within a dictionary must start on word
+boundaries. Since bytes 0 through 36 of each dictionary block make up
+the hash table, the first symbol entry will begin at byte 38
+(decimal).
+
+   Dictionary Record (length is the dictionary size in 512-byte
+   blocks)
+
+   37     1      <variable>  2                <conditional>
+   HTAB   FFLAG  Name        Block Number      Align Byte
+                 <-------------------repeated------------->
+   
+   Entries consist of the following: the first byte is the length of
+   the symbol to follow, the following bytes are the text of the
+   symbol, and the last two bytes are a byte-swapped word field that
+   specifies the page number (counting the library header as the 0th
+   page) at which the module defining the symbol begins.
+   
+   All entries may have at most one trailing null byte in order to
+   align the next entry on a word boundary.
+   
+   It is possible for a dictionary block to be full without all its
+   buckets being used. Such will be the case, for example, if symbol
+   names are longer on average than nine characters each. Therefore,
+   there must be some way to mark a block as full so that empty
+   buckets will be ignored.
+   
+   Byte 37 decimal (counting from 0) is reserved for this purpose. If
+   the block is not full, byte 37 will contain the word offset of the
+   beginning of free space in the block, but if the block is full,
+   byte 37 will contain the special value 255 decimal (FFH). Module
+   names are stored in the LHEADR record of each module.
+   
+Extended Dictionary
+-------------------
+
+The extended dictionary is optional and indicates dependencies between
+modules in the library. Versions of LIB earlier than 3.09 do not
+create an extended dictionary. The extended dictionary is placed at
+the end of the library.
+
+The dictionary is preceded by these values:
+
+   BYTE =0xF2 Extended Dictionary header
+   WORD length of extended dictionary in bytes excluding first three
+        bytes
+
+Start of extended dictionary:
+
+   WORD number of modules in library = N
+
+Module table, indexed by module number, with N + 1 fixed-length
+entries:
+
+   WORD module page number
+   WORD offset from start of extended dictionary to list of required
+        modules
+
+Last entry is null.
+
+Dictionary Hashing Algorithm
+----------------------------
+
+The last part of each library file is a dictionary, which contains
+indexes to all symbols in the library. The dictionary is divided into
+512-byte pages. Each page consists of a 37-byte bucket table and a 475-
+byte table of symbol entries.
+
+To find the right spot in the dictionary for a given symbol, the
+hashing algorithm is used. The hashing algorithm analyzes the name of
+the symbol and produces two indexes: a page and a bucket index, which
+together point to a single entry in the dictionary. The only problem
+is that more than one symbol name can generate exactly the same
+address. Because of this, the name found in the dictionary entry must
+be compared with the symbol's name, and if they are not identical, a
+correction to the address must be made. To make this correction
+possible, the hashing algorithm, in addition to the base address
+(page, bucket), also produces the correction values (delta-page, delta-
+bucket), which are added to the base address if the symbol's name does
+not match the name in an entry. The number of pages in the dictionary
+must always be prime, so if the symbol is not found, the consecutive
+adding of deltas produces the starting address again.
+
+Below is psueudocode illustrating the hashing algorithm used by the
+LIB (librarian) utility.
+
+   extern char *symbol;   /* Symbol to find        */
+   extern int dictlength;  /* Dictionary length in pages  */
+   extern int buckets;   /* Number of buckets on one page */
+   
+   
+   
+   char *pb;  /* A pointer to the beginning of the symbol  */
+   char *pe;  /*   "      end     "      */
+   int slength;  /* Length of the symbol's name      */
+   
+   int page_index;   /*  Page index           */
+   int page_index_delta;/*  Page index delta        */
+   int page_offset;   /*  Page offset (bucket #)     */
+   int page_offset_delta;/* Page offset delta        */
+   
+   unsigned c;
+   
+   slength = strlen(symbol);
+   pb = symbol;
+   pe = symbol + slength;
+   page_index = 0;
+   page_index_delta = 0;
+   page_offset = 0;
+   page_offset_delta = 0;
+   
+   while( slength-)
+   {
+        c = *(pf++) | 32; /* Convert character to lowercase */
+        page_index = (page_index<<2) XOR c;    /* Hash */
+        page_offset_delta = (page_offset_delta>>2)XORc;
+        c = *(pe++) | 32;
+        page_offset = (page_offset>>2) XOR c;     /* Hash */
+        pageiindexdelta = (page_index_delta<<2) XOR c;
+   }
+   
+   /* Calculate page index */
+   page_index = page_index MODULO dictlength;
+   
+   
+   /* Calculate page index delta */
+   if((page_index_delta = page_index_delta MODULO dictlength) == 0)
+        page_index_delta = 1;
+   
+   
+   /* Calculate page offset */
+   page_offset = page_offset MODULO buckets;
+   
+   
+   /* Calculate page offset delta */
+   if( (page_offset_delta = page_offset_delta MODULO buckets) == 0)
+     page_offset_delta = 1;

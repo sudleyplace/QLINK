@@ -1,0 +1,21 @@
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;
+;;	Windows Symbol Group file format
+;;
+;;	This file may contain comments, like this line, by preceding each
+;;	line with a semicolon (;).  Comments may also appear at the end of
+;;	each line, since all input after the group name is ignored.
+;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+; Group Mode	Sel	Group name
+
+;;1000	P	DF	PGROUP		; QLINK PM code
+  1000	V	*	PGROUP		; QLINK PM code
+  1001	V	*	DGROUP		; QLINK VM/PM data
+
+; V86 mode segments
+
+  1010	V	*	NGROUP		; QLINK VM code/data
+
+

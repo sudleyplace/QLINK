@@ -1,0 +1,359 @@
+<!--This file created 3:20 PM  7/25/97 by Claris Home Page version 2.0-->
+<HTML>
+<HEAD>
+   <TITLE>Windows Resource (.RES) Files</TITLE>
+   <META NAME=GENERATOR CONTENT="Claris Home Page 2.0">
+   <X-SAS-WINDOW TOP=0 BOTTOM=634 LEFT=0 RIGHT=704>
+<META NAME="Author" CONTENT="Ray Lischner"><META NAME="Description" Content="Format of Windows resource (.RES) files"><meta name="keywords" content="file formats,resource files, .res files,windows,win32,graphics">
+</HEAD>
+<BODY>
+
+<H1><A NAME="top"></A>Windows Resource (.RES) Files</H1>
+
+<P>By Ray Lischner, <A HREF="http://www.tempest-sw.com/">Tempest
+Software</A></P>
+
+<P>A Windows resource file (.RES) contains a series of packed
+resource entries, with no other structure, that is no headers,
+footers, padding, etc. The format of a resource entry is different
+for Windows 3.x (<A HREF="#16bit">16-bit</A>) and Win32, that is,
+Windows 95 and Windows NT (<A HREF="#32bit">32-bit</A>).</P>
+
+<H2><A NAME="32bit"></A>32-bit</H2>
+
+<P>A 32-bit .RES file starts with an empty resource entry of 32
+bytes:</P>
+
+<P>00000000 20000000 FFFF0000 FFFF0000 00000000 00000000 00000000
+00000000</P>
+
+<P>After that comes the real resource entries, packed into the file
+with no padding or other structure--just a series of resource
+entries.</P>
+
+<P>Each resource entry has a header followed immediately by the
+resource data. Immediately after the data for one entry comes the
+header for the next entry. Each header has the following format:</P>
+
+<P><TABLE BORDER=1>
+   <TR>
+      <TH>
+         <P ALIGN=LEFT>Field
+      </TH><TH>
+         <P>Size (bytes)
+      </TH><TD>
+         <P>Description
+      </TD></TR>
+   <TR>
+      <TD>
+         <P>Data Size
+      </TD><TD>
+         <P><CENTER>4</CENTER>
+      </TD><TD>
+         <P>Size of the resource data that follow the header
+      </TD></TR>
+   <TR>
+      <TD>
+         <P>Header Size
+      </TD><TD>
+         <P><CENTER>4</CENTER>
+      </TD><TD>
+         <P>Size of the resource header (always at least 16)
+      </TD></TR>
+   <TR>
+      <TD>
+         <P>Type
+      </TD><TD>
+         <P><CENTER><I>variable</I></CENTER>
+      </TD><TD>
+         <P><A HREF="#type">Resource type</A>
+      </TD></TR>
+   <TR>
+      <TD>
+         <P>Name
+      </TD><TD>
+         <P><CENTER><I>variable</I></CENTER>
+      </TD><TD>
+         <P>Resource name or identifier
+      </TD></TR>
+   <TR>
+      <TD>
+         <P>Data Version
+      </TD><TD>
+         <P><CENTER>4</CENTER>
+      </TD><TD>
+         <P>Version number for resource data format, usually 0
+      </TD></TR>
+   <TR>
+      <TD>
+         <P>Flags
+      </TD><TD>
+         <P><CENTER>2</CENTER>
+      </TD><TD>
+         <P>Most flags are for backward compability with Win16.
+         Discardable (1000<SUB>16</SUB>) is the only Win32 flag.
+      </TD></TR>
+   <TR>
+      <TD>
+         <P>Language
+      </TD><TD>
+         <P><CENTER>2</CENTER>
+      </TD><TD>
+         <P>Primary and secondary language identifiers. Zero for
+         language-neutral, or look up your Windows documentation for
+         a full list of identifiers. Form a language identifier from
+         a primary and sublanguage as follows: (sublanguage &lt;&lt;
+         10 | primary).
+      </TD></TR>
+   <TR>
+      <TD>
+         <P>Version
+      </TD><TD>
+         <P><CENTER>4</CENTER>
+      </TD><TD>
+         <P>Version number for the resource entry
+      </TD></TR>
+   <TR>
+      <TD>
+         <P>Characteristics
+      </TD><TD>
+         <P><CENTER>4</CENTER>
+      </TD><TD>
+         <P>Anything you want
+      </TD></TR>
+</TABLE>The type and name can be numeric or textual. If the first two
+bytes are FFFF<SUB>16</SUB>, the subsequent two bytes are the numeric
+value. Otherwise, the first two bytes are the first Unicode character
+in a zero-terminated string.</P>
+
+<H2><A NAME="16bit"></A>16-bit</H2>
+
+<P>Each resource entry has a header followed immediately by the
+resource data. Immediately after the data for one entry comes the
+header for the next entry. Each header has the following format:</P>
+
+<P><TABLE BORDER=1>
+   <TR>
+      <TH>
+         <P ALIGN=LEFT>Field
+      </TH><TH>
+         <P>Size
+      </TH><TH>
+         <P ALIGN=LEFT>Description
+      </TH></TR>
+   <TR>
+      <TD>
+         <P>Type
+      </TD><TD>
+         <P><CENTER><I>variable</I></CENTER>
+      </TD><TD>
+         <P><A HREF="#type">Resource type</A>
+      </TD></TR>
+   <TR>
+      <TD>
+         <P>Name
+      </TD><TD>
+         <P><CENTER><I>variable</I></CENTER>
+      </TD><TD>
+         <P>Resource name or identifier
+      </TD></TR>
+   <TR>
+      <TD>
+         <P>Flags
+      </TD><TD>
+         <P><CENTER>2</CENTER>
+      </TD><TD>
+         <P>Discardable=1000<SUB>16</SUB>,
+         Moveable=0010<SUB>16</SUB>, Pure=0020<SUB>16</SUB>,
+         Preload=0040<SUB>16</SUB>
+      </TD></TR>
+   <TR>
+      <TD>
+         <P>Size
+      </TD><TD>
+         <P><CENTER>4</CENTER>
+      </TD><TD>
+         <P>Size of the resource data that immediately follow the
+         header
+      </TD></TR>
+</TABLE>The type and name can be numeric or textual. If the first
+byte is FF<SUB>16</SUB>, the subsequent two bytes are the numeric
+value. Otherwise, the first byte is the first character of the ANSI
+string.</P>
+
+<H2><A NAME="type"></A>Resource types</H2>
+
+<P>Windows reserves numeric resource types under 256 for its own use.
+In this range are several predefined resource types:</P>
+
+<P><TABLE BORDER=1>
+   <TR>
+      <TH>
+         <P ALIGN=LEFT>Type
+      </TH><TH>
+         <P>Value
+      </TH><TH>
+         <P ALIGN=LEFT>Description
+      </TH></TR>
+   <TR>
+      <TD>
+         <P>RT_CURSOR
+      </TD><TD>
+         <P><CENTER>1</CENTER>
+      </TD><TD>
+         <P>Cursor image (one entry in a cursor group)
+      </TD></TR>
+   <TR>
+      <TD>
+         <P>RT_BITMAP
+      </TD><TD>
+         <P><CENTER>2</CENTER>
+      </TD><TD>
+         <P>Bitmap (Windows or OS/2 BMP format)
+      </TD></TR>
+   <TR>
+      <TD>
+         <P>RT_ICON
+      </TD><TD>
+         <P><CENTER>3</CENTER>
+      </TD><TD>
+         <P>Icon image (one entry in an icon group)
+      </TD></TR>
+   <TR>
+      <TD>
+         <P>RT_MENU
+      </TD><TD>
+         <P><CENTER>4</CENTER>
+      </TD><TD>
+         <P>Menu
+      </TD></TR>
+   <TR>
+      <TD>
+         <P>RT_DIALOG
+      </TD><TD>
+         <P><CENTER>5</CENTER>
+      </TD><TD>
+         <P>Dialog box
+      </TD></TR>
+   <TR>
+      <TD>
+         <P>RT_STRING
+      </TD><TD>
+         <P><CENTER>6</CENTER>
+      </TD><TD>
+         <P>String table (must have numeric identifier, not textual)
+      </TD></TR>
+   <TR>
+      <TD>
+         <P>RT_FONTDIR
+      </TD><TD>
+         <P><CENTER>7</CENTER>
+      </TD><TD>
+         <P>Font directory
+      </TD></TR>
+   <TR>
+      <TD>
+         <P>RT_FONT
+      </TD><TD>
+         <P><CENTER>8</CENTER>
+      </TD><TD>
+         <P>Font entry
+      </TD></TR>
+   <TR>
+      <TD>
+         <P>RT_ACCELERATOR
+      </TD><TD>
+         <P><CENTER>9</CENTER>
+      </TD><TD>
+         <P>Keyboard accelerator table
+      </TD></TR>
+   <TR>
+      <TD>
+         <P>RT_RCDATA
+      </TD><TD>
+         <P><CENTER>10</CENTER>
+      </TD><TD>
+         <P>Application-defined data
+      </TD></TR>
+   <TR>
+      <TD>
+         <P>RT_GROUP_CURSOR
+      </TD><TD>
+         <P><CENTER>12</CENTER>
+      </TD><TD>
+         <P>Group header for a cursor
+      </TD></TR>
+   <TR>
+      <TD>
+         <P>RT_GROUP_ICON
+      </TD><TD>
+         <P><CENTER>14</CENTER>
+      </TD><TD>
+         <P>Group header for an icon
+      </TD></TR>
+</TABLE></P>
+
+<P>Win32 defines additional resource types:</P>
+
+<P><TABLE BORDER=1>
+   <TR>
+      <TH>
+         <P ALIGN=LEFT>Type
+      </TH><TH>
+         <P>Value
+      </TH><TH>
+         <P ALIGN=LEFT>Description
+      </TH></TR>
+   <TR>
+      <TD>
+         <P>RT_MESSAGETABLE
+      </TD><TD>
+         <P><CENTER>11</CENTER>
+      </TD><TD>
+         <P>Message table
+      </TD></TR>
+   <TR>
+      <TD>
+         <P>RT_VERSION
+      </TD><TD>
+         <P><CENTER>16</CENTER>
+      </TD><TD>
+         <P>Version information
+      </TD></TR>
+   <TR>
+      <TD>
+         <P>RT_DLGINCLUDE
+      </TD><TD>
+         <P><CENTER>17</CENTER>
+      </TD><TD>
+         <P>Dialog include
+      </TD></TR>
+   <TR>
+      <TD>
+         <P>RT_PLUGPLAY
+      </TD><TD>
+         <P><CENTER>19</CENTER>
+      </TD><TD>
+         <P>Plug and play
+      </TD></TR>
+   <TR>
+      <TD>
+         <P>RT_VXD
+      </TD><TD>
+         <P><CENTER>20</CENTER>
+      </TD><TD>
+         <P>VxD
+      </TD></TR>
+   <TR>
+      <TD>
+         <P>RT_ANICURSOR
+      </TD><TD>
+         <P><CENTER>21</CENTER>
+      </TD><TD>
+         <P>Animated cursor
+      </TD></TR>
+</TABLE></P>
+
+<P><A HREF="#top">Top</A></P>
+</BODY>
+</HTML>
